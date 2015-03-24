@@ -1,0 +1,3 @@
+#!/bin/sh
+
+sort -T $TMPDIR -k1,1 -k4,5n -k7,7 $1
