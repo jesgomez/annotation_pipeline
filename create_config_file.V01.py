@@ -4,6 +4,10 @@ import json
 import argparse
 import sys
 
+#Author: Jessica Gomez, CNAG.
+#Contact email: jgomez@pcb.ub.cat
+#Date:03242015
+
 class CreateConfigurationFile(object):
     """Class which manages Configuration file Manager"""
       

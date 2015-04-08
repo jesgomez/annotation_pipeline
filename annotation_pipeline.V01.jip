@@ -1,11 +1,14 @@
 #!/usr/bin/env jip
 #
 # Usage:
-#     annotation_pipeline.jip -c <cfg>  
+#     annotation_pipeline.V01.jip -c <cfg>  
 #
 # Inputs:
 #     -c, --cfg <cfg>          Configuration json file generated with create_config_file.py
 #
+#Author: Jessica Gomez, CNAG.
+#Contact email: jgomez@pcb.ub.cat
+#Date:03242015
 
 #%begin pipeline
 import os
@@ -378,8 +381,8 @@ if cfg["Parameters"]["run_geneid_introns"]:
     jobMergingGeneIdIntrons = job("merge_evm",\
        log = dirGeneidIntronsOutputOut + "merge_evm.err", \
        out = dirGeneidIntronsOutputOut + "merge_evm.out").\
-       bash("cat " + out_prediction_geneid_introns + ".* | grep -v '#' | gawk '$2==\"geneid_v1.4\" && $3!=\"intron\"' | sed 's/\tgeneid_v1.4\t/\tgeneid_introns\t/g' > " +\
-            out_evm_geneid_introns + ";" +\
+       bash("cat " +out_prediction_geneid_introns + ".* | grep -v '#' | gawk '$3!=\"intron\"' | sed 's/\tgeneid_v1.4\t/\tgeneid_introns\t/g'"+\
+            " | sed 's/\tevidence\t/\tgeneid_introns\t/g' > " + out_evm_geneid_introns + ";" +\
             "cd " + EVM_DIR +";" +\
             "ln -s ../" + out_evm_geneid_introns + " geneid_introns_predictions.gff3;" +\
             create_weights_file)
@@ -783,15 +786,16 @@ if cfg["Parameters"]["run_update"]:
              " -A -g " + genome_reference + " -t " + DIR + "/" + PASA_DIR + "/transcripts.fa.clean -L --annots_gff3 " + pasadb +\
              ".first_PASA_update.gff3;"+\
              "mv " + pasadb + ".gene_structures_post_PASA_updates.*.gff3 " + pasadb + ".second_PASA_update.gff3;" +\
+             HOME + "/scripts/process_pasa_update.V3.pl " + pasadb + ".second_PASA_update.gff3 evm.gff3 > " + pasadb +\
+             ".processed_updates.gff3;" +\
              HOME + "/scripts/framefixer.pl -v -s " + genome_reference + " -param " + geneid_parameters + " " + pasadb +\
-             ".second_PASA_update.gff3 > " + pasadb + "_ff.gff3 2> " + pasadb + "_ff.log;" +\
+             ".processed_updates.gff3 > " + pasadb + "_ff.gff3 2> " + pasadb + "_ff.log;" +\
              HOME + "/scripts/assignIDs_generic_fast.pl -a " + pasadb + "_ff.gff3 -project " + project_name[0] + " -V " + project_name[1] + ";" +\
-             "mv *." + project_name[0] + "." + project_name[1] + ".gff3 " + project_name[0] + project_name[1] + ".gff3;" +\ 
-             "cat " + project_name[0] + project_name[1] + ".gff3 | " + HOME + "scripts/nmd_filter.pl > " + project_name[0] +\
-             project_name[1] + ".noNMD.gff3;" +\
-             HOME + "/scripts/CDS2seq.v2.pl -gff " + project_name[0] + project_name[1] + ".noNMD.gff3 -seq " + genome_reference + ";" +\
-             HOME + "/scripts/get_longest_peptide.pl " + project_name[0] + project_name[1] + ".noNMD.pep.fa > " +\
-             project_name[0] + project_name[1] + ".noNMD.longestpeptide.fa;")
+             "cat *." + project_name[0] + "." + project_name[1] + ".gff3 | " + HOME + "scripts/nmd_filter.pl > " + project_name[0] +\
+             project_name[1] + ".gff3;" +\
+             HOME + "/scripts/CDS2seq.v2.pl -gff " + project_name[0] + project_name[1] + ".gff3 -seq " + genome_reference + ";" +\
+             HOME + "/scripts/get_longest_peptide.pl " + project_name[0] + project_name[1] + ".pep.fa > " +\
+             project_name[0] + project_name[1] + ".longestpeptide.fa;")
 
 
 

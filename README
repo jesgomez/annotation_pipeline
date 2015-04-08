@@ -9,7 +9,9 @@ Annotation pipeline documentation
 
 Introduction
 
-The annotation pipeline is a tool that allows to structurally annotate the protein coding parts of a genome through a combination of ab initio gene predictions and homology searches. It is designed to be run in the CNAG-cluster and it uses the JIP environment.
+The annotation pipeline is a tool that allows to structurally annotate the protein coding parts of a genome through a combination of ab initio gene predictions and homology searches. It uses the JIP environment.
+
+It has been designed at the CNAG (Centre Nacional d'Anàlisi Genòmica).
 
 2) Download and install the following programs required for the pipeline:
 
