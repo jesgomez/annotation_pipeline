@@ -1,0 +1,20 @@
+#!/usr/bin/env jip
+#Select EVM
+#
+#Usage:
+# selectEVM.jip -g <global_log> -e <home_dir> -q <EVM_DIR> -p <PASA_DIR> -i <inputs> -o <output>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -q, --EVM_DIR <EVM_DIR>                     Path to the EVM directory
+# -p, --PASA_DIR <PASA_DIR>
+# -i, --inputs <inputs>...
+#
+#Outputs:
+# -o, --output <output>
+#Options:
+# 
+
+cd ${EVM_DIR}
+${home_dir}/scripts/select_best_evm.V02.pl ${PASA_DIR}/gmap.spliced_alignments.gff3 

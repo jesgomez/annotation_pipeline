@@ -14,8 +14,9 @@ my @line;
 
 for ($i=1; $i<=$total_evm; $i++) {
    #print "$i\n";
-   system "intersectBed -wo -a evm_weights_'$i'.TEcleaned.CDS.gff3 -b ../'$gmap_alignments'  > evm_weights_'$i'.TEcleaned.BT.gmap.out";
-   open BEDTOOLS, "<", "evm_weights_$i.TEcleaned.BT.gmap.out" ;
+   system "grep CDS evm_weights_'$i'.gff3 > evm_weights_'$i'.CDS.gff3";
+   system "intersectBed -wo -a evm_weights_'$i'.CDS.gff3 -b $gmap_alignments  > evm_weights_'$i'.BT.gmap.out";
+   open BEDTOOLS, "<", "evm_weights_$i.BT.gmap.out" ;
    $bp{$i} = 0;
    while (<BEDTOOLS>) {
       chomp;
@@ -42,5 +43,5 @@ foreach (keys %bp) {
    }
 }
 
-system "ln -s evm_weights_'$bestid'.TEcleaned.gff3 evm_weights_'$bestid'.best.TEcleaned.gff3";
-print "evm_weights_$bestid.TEcleaned.gff3\n";
+system "ln -s evm_weights_'$bestid'.gff3 evm.best.gff3";
+print "Best evm weights are $bestid\n";

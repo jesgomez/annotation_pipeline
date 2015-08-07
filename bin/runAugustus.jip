@@ -1,0 +1,36 @@
+#!/usr/bin/env jip
+#Run augustus
+#
+#Usage:
+# runAugustus.jip -r <masked_chunk> -g <global_log> -e <home_dir> -o <out> -s <species> --alternatives_from_sampling <alternatives_from_sampling> --sample <sample> --gff3 <gff3> --noInFrameStop <noInFrameStop> --uniqueGeneId <uniqueGeneId> --maxtracks <maxtracks> --strand <strand> --singlestrand <singlestrand> --min_intron_len <min_intron_len> [--additional <additional>]  
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+#
+#Outputs:
+# -o, --out <out>                             File to keep the results of this step
+#
+#Options:
+# -s, --species <species>                     Species to run augustus with its parameters
+# --alternatives_from_sampling <alternatives_from_sampling>
+# --sample <sample>
+# --gff3 <gff3>
+# --noInFrameStop <noInFrameStop>
+# --uniqueGeneId <uniqueGeneId>
+# --maxtracks <maxtracks>
+# --strand <strand>
+# --singlestrand <singlestrand>
+# --min_intron_len <min_intron_len>
+# --additional <additional>
+# -r, --masked_chunk <masked_chunk>           Chunk of the masked genome
+#
+
+module unload intel
+augustus --species=${species} --alternatives-from-sampling=${alternatives_from_sampling} --sample=${sample} --gff3=${gff3} --noInFrameStop=${noInFrameStop} --uniqueGeneId=${uniqueGeneId} --maxtracks=${maxtracks} --strand=${strand} --singlestrand=${singlestrand} --min_intron_len=${min_intron_len} ${additional_aug_opts} ${masked_chunk}  > ${out} 
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in augustus step. Removing outputs\n" >> ${global_log}
+    exit 2
+fi

@@ -1,0 +1,35 @@
+#!/usr/bin/env jip
+#Run geneid with introns		
+#
+#Usage:
+# runGeneidIntrons.jip -r <genome_chunk> -g <global_log> -e <home_dir> -o <out> -i <geneid_parameters> -t <geneid_introns_options> -j <incoding_junctions>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -i, --geneid_parameters <geneid_parameters> File with the geneid parameters for the species
+# -j, --incoding_junctions <incoding_junctions>     File with the junctions that will be used as evidence
+#
+#Outputs:
+# -o, --out <out>                             File to keep the results of this step
+#
+#Options:
+# -r, --genome_chunk <genome_chunk>           Chunk of the masked genome
+# -t, --geneid_introns_options <geneid_introns_options>       Options to run geneid with introns with
+
+
+cd $TMPDIR
+ln -s ${incoding_junctions} junctions.gff
+${home_dir}/scripts/sortgff junctions.gff > junctions.sorted.gff
+bgzip junctions.sorted.gff
+tabix -p gff junctions.sorted.gff.gz
+ln -s ${genome_chunk} masked_genome_chunk.fa
+fastaindex masked_genome_chunk.fa masked.index
+${home_dir}/scripts/rungeneidwithhints.pl masked_genome_chunk.fa masked.index junctions.gff junctions.sorted.gff.gz ${geneid_parameters} ${geneid_introns_options}
+cat *geneid_with_introns.gff3 > ${out}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in geneid with introns step. Removing outputs\n" >> ${global_log}
+    exit 2
+fi

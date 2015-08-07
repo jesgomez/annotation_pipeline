@@ -1,0 +1,42 @@
+#!/usr/bin/env jip
+#Get incoding junctions
+#
+#Usage:
+# getIncodingJunctions.jip -w <working_junctions_dir> -g <global_log> -e <home_dir> -s <spaln_cds> -j <junctions> -b <junctions_basename> -n <geneid_out> -a <augustus_out> -o <out>
+#
+#Inputs:
+# -w, --working_junctions_dir <working_junctions_dir>         Directory to run this step
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -s, --spaln_cds <spaln_cds>                 Output of the spaln step in gff3 cds format
+# -j, --junctions <junctions>                 File with the junctions
+# -n, --geneid_out <geneid_out>               Output of geneid
+# -a, --augustus_out <augustus_out>           Output of augustus
+#
+#Outputs:
+# -o, --out <out>                             File to keep the incoding junctions
+#
+#Options:
+# -b, --junctions_basename <junctions_basename>   Basename of the junctions file
+# 
+
+cd ${working_junctions_dir}
+${home_dir}/scripts/exon2intron_TranscriptSorted_simple.pl -f cds < ${spaln_cds} > proteins_cds.introns.gff3
+${home_dir}/scripts/sortgff ${junctions} > ${junctions_basename}.strand.sorted.gff
+${home_dir}/scripts/sortgff proteins_cds.introns.gff3 > proteins_cds.sorted.introns.gff3
+intersectBed -wa -f 0.75 -r -a ${junctions_basename}.strand.sorted.gff -b proteins_cds.sorted.introns.gff3 > junctions_BT_proteins.out
+gawk '$3=="mRNA"' ${geneid_out} > geneid_mRNA.gff3
+gawk '$3=="mRNA"' ${augustus_out} > augustus_mRNA.gff3
+${home_dir}/scripts/sortgff geneid_mRNA.gff3 > geneid_mRNA.sorted.gff3
+${home_dir}/scripts/sortgff augustus_mRNA.gff3 > augustus_mRNA.sorted.gff3
+intersectBed -wa -a ${junctions_basename}.strand.sorted.gff -b geneid_mRNA.sorted.gff3 > junctions_BT_geneid.out
+intersectBed -wa -a ${junctions_basename}.strand.sorted.gff -b augustus_mRNA.sorted.gff3 > junctions_BT_augustus.out
+cat junctions_BT_proteins.out junctions_BT_geneid.out junctions_BT_augustus.out | sort | uniq | perl -ane 'print "$F[0]\t$F[3]\t$F[4]\t.\t.\t$F[6]\n";' | sort -k1,1 -k2,2n | bedtools merge -s -n | perl -ane 'print "$F[0]\tjunctions\tIntron\t$F[1]\t$F[2]\t.\t$F[4]\t.\tID=$F[0]:$F[1]-$F[2]$F[4]\($F[3] times\)\n";' > ${out}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in getting incoding junctions step. Removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Getting incoding junctions step: done!" >> ${global_log}
+fi

@@ -1,0 +1,28 @@
+#!/usr/bin/env jip
+#Run Cmsearch
+#
+#Usage:
+# runCmsearch.jip -r <genome> -g <global_log> -e <home_dir> -q <ncRNA_DIR> -t <cmsearch_CPUs> -o <output> -f <RFAM>          
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -r, --genome <genome>                       File with the genome
+# -q, --ncRNA_DIR <EVM_DIR>                   Path to the ncRNA directory
+# -f, --RFAM <RFAM>                           RFAM library
+#
+#Outputs:
+# -o, --output <output>
+#Options:
+# -t, --cmsearch_CPUs <cmsearch_CPUs>
+
+cd ${ncRNA_DIR}
+cmsearch --cpu ${cmsearch_CPUs} --tblout ${output} ${RFAM} ${genome}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in running Cmsearch step. Removing outputs." >> ${global_log}
+    exit 2
+else
+    echo "Cmsearch step: done!" >> ${global_log}
+fi

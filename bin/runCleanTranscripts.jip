@@ -1,0 +1,29 @@
+#!/usr/bin/env jip
+#Run clean transcripts
+#
+#Usage:
+# runCleanTranscripts.jip -g <global_log> -e <home_dir> -p <PASA_DIR> --transcripts <transcripts> -o <out> --transcripts_out_name <transcripts_out_name>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -p, --PASA_DIR <EVM_DIR>                    Path to the PASA directory
+# --transcripts <transcripts>                 File with the transcripts to map in fasta format
+#
+#Outputs:
+# -o, --out <out>
+# --transcripts_out_name <transcripts_out_name>
+#Options:
+#
+
+ln -s ${transcripts} ${transcripts_out_name}
+cd ${PASA_DIR} 
+seqclean ${transcripts_out_name}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in seqclean step. Removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Seqclean step: done!" >> ${global_log}
+fi

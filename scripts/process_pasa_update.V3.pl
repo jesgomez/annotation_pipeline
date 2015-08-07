@@ -8,9 +8,7 @@ defined($update) || die ("##ERROR## This script requires a pasa update file as f
 my $evm_models = $ARGV[1];
 defined($evm_models) || die ("##ERROR## This script requires an evm output file as third argument.\n");
 
-my $mrna4bt = "update_mRNAs.gff3";
 open UPDATE, "<", "$update";
-#open MRNAS, ">", "$mrna4bt";
 
 my %genes; 
 my %transcripts;
@@ -87,6 +85,7 @@ while (<EVM>){
         if ($line[8] =~ m/ID=([^;]+)/) {
             $evm_gene = $1;
             $evm_genes{$evm_gene}=$_;
+           # print STDERR "$_\n";
         }
     #print "$evm_gene\n";
     }
@@ -99,7 +98,7 @@ while (<EVM>){
         $n = 0;
         $evm_mrna_coords{$evm_gene}{$evm_mRNA}->{start} = $line[3];
         $evm_mrna_coords{$evm_gene}{$evm_mRNA}->{end} = $line[4];
-        #print "$evm_gene\t$evm_mRNA\n";
+        #print STDERR "$evm_gene\t$evm_mRNA\n";
     }
     else {
         if ($line[8] =~ m/Parent=/) {$evm_cds_parent = $';}
@@ -114,7 +113,7 @@ while (<EVM>){
             $evm_coords{$evm_gene}{$evm_cds_parent}{$n}->{start}=$line[3];
             $evm_coords{$evm_gene}{$evm_cds_parent}{$n}->{end}=$line[4];
             $n++;
-           # print  "$evm_gene\t$evm_cds_parent\t$evm_cds\t$len\t$evm_cds{$evm_gene}{$evm_cds_parent}->{lengths}\n";
+         #  print STDERR "$evm_gene\t$evm_cds_parent\t$evm_cds\t$len\t$evm_cds{$evm_gene}{$evm_cds_parent}->{lengths}\n";
         }
     }
 }
@@ -128,42 +127,50 @@ my %final_gene_comb;
 my %conserved_cds;
 my %print_mrna_evm;
 my %ids;
+my $tr;
 foreach my $parse_gene (keys %genes) {
    # my $size = scalar keys %{$evm_cds{$parse_gene}};
-   # print "$parse_gene\t$size\n";
+   # print STDERR "$parse_gene\t$size\n";
    if (!exists $evm_cds{$parse_gene}) {
-     my @test = split /_/, $parse_gene;
-     my $total = scalar @test;
-     my $i = 0;
-     $evm_length{$parse_gene} = 0;
-     # print STDERR "$total\n";
-     while ($i < $total) {
-        my @tr = ("$test[$i]", "$test[$i+1]");
-       # print STDERR "@tr\n";
-        my $tr = join "_", @tr;
-       # print STDERR "$tr\n";
-        $i = $i + 2;
-        #print STDERR "$evm_genes{$tr}\n";
-        foreach (keys %{$evm_transcripts{$tr}}) {
-          # print STDERR "$evm_transcripts{$tr}{$_}\n";
-           $evm_length{$parse_gene} = $evm_length{$parse_gene} + $evm_cds{$tr}{$_}->{lengths};
-          # print STDERR "$tr\t$_\t$parse_gene\t$evm_length{$parse_gene}\n";
-        }
-     }
-     foreach my $updt_mrna (keys %{$cds{$parse_gene}}) {
+       my @test = split /_evm/, $parse_gene;
+       my $total = scalar @test;
+       my $i = 0;
+      # print STDERR "$parse_gene\n";
+       $evm_length{$parse_gene} = 0;
+    #  print STDERR "$total\n";
+       while ($i < $total) {
+           if ($i != 0) {
+               $tr = "evm" . $test[$i]; 
+           }
+           else {
+               $tr = $test[$i];
+           }
+           $i = $i + 1;
+        #  print STDERR "$tr\n";
+           foreach (keys %{$evm_transcripts{$tr}}) {
+         #      print STDERR "$evm_transcripts{$tr}{$_}\n";
+               $evm_length{$parse_gene} = $evm_length{$parse_gene} + $evm_cds{$tr}{$_}->{lengths};
+          #     print STDERR "$tr\t$_\t$parse_gene\t$evm_length{$parse_gene}\n";
+           }
+      }
+      foreach my $updt_mrna (keys %{$cds{$parse_gene}}) {
          #print STDERR "$parse_gene\t$evm_length{$parse_gene}\t$cds{$parse_gene}{$updt_mrna}->{lengths}\n";
          my $cov = $cds{$parse_gene}{$updt_mrna}->{lengths} / $evm_length{$parse_gene};
          if ($cov > 0.7) {
              $final_mrna_comb{$parse_gene}{$updt_mrna}++;
              my $i = 0;
+             my @tr;
              while ($i < $total) {
-               my @tr = ("$test[$i]", "$test[$i+1]");
+              # my @tr = ("$test[$i]", "$test[$i+1]");
+                push (@tr, "$test[$i]" );
                # print STDERR "@tr\n";
-               my $tr = join "_", @tr;
+                $i++;
+            }
+            my $tr = join "_evm", @tr;
                # print STDERR "$tr\n";
-               $i = $i + 2;
+            #   $i = $i + 2;
                #print STDERR "$evm_genes{$tr}\n";      
-               foreach my $evm_con_cds (keys %{$evm_coords{$tr}}) {
+           foreach my $evm_con_cds (keys %{$evm_coords{$tr}}) {
                #  print STDERR "$evm_con_cds\n";
                    foreach my $evm_cds_checked(keys %{$evm_coords{$tr}{$evm_con_cds}}) {
                    #  print STDERR "$parse_gene\t$evm_con_cds\t$evm_cds_checked\n";
@@ -186,18 +193,19 @@ foreach my $parse_gene (keys %genes) {
                       $ids{$tr}++ if (!exists $ids{$tr} && !exists $conserved_cds{$evm_con_cds}{$evm_cds_checked});
                    }
                }              
-             }
+           #  }
              # print STDERR "$updt_mrna\n";
          }
          else {
             # print STDERR "@test\n";
             my $i = 0;
             while ($i < $total) {
-               my @tr = ("$test[$i]", "$test[$i+1]");
+            #   my @tr = ("$test[$i]", "$test[$i+1]");
                # print STDERR "@tr\n";
-               my $tr = join "_", @tr;
+             #  my $tr = join "_", @tr;
                # print STDERR "$tr\n";
-               $i = $i + 2;
+               my $tr = $test[$i];
+               $i = $i + 1;
                #print STDERR "$evm_genes{$tr}\n";
                $print_evm_comb{$tr}++ if (!exists $print_evm_comb{$tr});
             }        

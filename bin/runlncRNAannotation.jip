@@ -1,0 +1,49 @@
+#!/usr/bin/env jip
+#Run lncRNA annotation
+#
+#Usage:
+# runlncRNAannotation.jip -g <global_log> -e <home_dir> -d <ncRNA_DIR> -r <genome> -a <coding} -o <output> -p <PASA_out> -n <name> -v <version> -l <lncRNA_output> -m <RM> --proteins <proteins> --annotated_proteins <annotated_proteins> -c <chunks> --blast_proteins_dir <blast_proteins_dir> --blast_annotated_dir <blast_annotated_dir>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -a, --coding <coding>                       Protein coding gene annotation file
+# -p, --PASA_out <PASA_out>                   Pasa assemblies file
+# -r, --genome <genome>                       File with the genome
+# -d, --ncRNA_DIR <ncRNA_DIR>                  
+# -m, --RM <RM>
+# --proteins <proteins> 
+# --annotated_proteins <annotated_proteins>
+#
+#Outputs:
+# -l, --lncRNA_output <output>
+#Options:
+# -n, --name <name>                           Project name
+# -v, --version <version>                     ncRNAannotation version 
+# -c, --chunks <chunks>                       Number of chunks
+# --blast_proteins_dir <blast_proteins_dir>
+# --blast_annotated_dir <blast_annotated_dir>
+#
+cd ${ncRNA_DIR}
+${home_dir}/scripts/annotate_lncRNAs.V02.pl ${coding} ${PASA_out} ${name} ${version} > lncRNA_annotation.prev2clust.gff3
+${home_dir}/scripts/assignIDs_generic_fast.v2.pl -a lncRNA_annotation.prev2clust.gff3 -project ${name}.lnc -v ${version}
+gawk '$3!="CDS"' *.${name}.lnc.${version}.gff3 | perl -ane 'chomp;(s/;product=[^\n]+//); print "$_\n";' > lncRNA_annotation.nonclassified.gff3
+gawk '$3=="transcript"' lncRNA_annotation.nonclassified.gff3 > lncRNA_transcripts.nonclassified.gff3
+
+intersectBed -s -f 0.90 -wo -a ${RM} -b lncRNA_transcripts.nonclassified.gff3  > RM_BT_lncRNA_90.out
+intersectBed -s -f 0.90 -wo -a lncRNA_transcripts.nonclassified.gff3 -b ${RM} > lncRNA_BT_RM_90.out
+cat lncRNA_BT_RM_90.out | perl -ne 'if (m/ID=([^;]+)/) {$gene=$1;} if (m/"Motif:([^"]+)/) {$motif=$1;} print "$gene\t$motif\n";' > nc_RM.ids
+cat RM_BT_lncRNA_90.out | perl -ne 'if (m/ID=([^;]+)/) {$gene=$1;} if (m/"Motif:([^"]+)/) {$motif=$1;} print "$gene\t$motif\n";' > RM_nc.ids
+
+${home_dir}/scripts/CDS2seq.v2.pl -gff *.${name}.lnc.${version}.gff3 -seq ${genome}
+makeblastdb -in *.${name}.lnc.${version}.cds.fa -dbtype nucl -out lncRNA_cds_db
+mkdir ${blast_proteins_dir}
+cd ${blast_proteins_dir}
+ln -s ${proteins} proteins.fa
+${home_dir}/scripts/fasta2chunks.pl -f proteins.fa -n ${chunks}
+cd ..
+mkdir ${blast_annotated_dir}
+cd ${blast_annotated_dir}
+ln -s ${annotated_proteins} annotated_proteins.fa
+${home_dir}/scripts/fasta2chunks.pl -f annotated_proteins.fa -n ${chunks}
+

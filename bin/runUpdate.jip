@@ -1,0 +1,35 @@
+#!/usr/bin/env jip
+#Run Annotation Update
+#
+#Usage:
+# runUpdate.jip -r <genome> -g <global_log> -e <home_dir> --pasa_home <pasa_home> --update_config <update_config> -u <UPDATE_DIR> -a <current_annot> -t <transcripts> -c <cleaned_transcripts> --pasadb <pasadb> -o <output> 
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -r, --genome <genome>                       File with the genome                 
+# -u, --UPDATE_DIR <UPDATE_DIR>
+# --pasa_home <pasa_home>
+# --update_config <update_config>
+# -a, --current_annot <current_annot>
+# -t, --transcripts <transcripts>
+# -c, --cleaned_transcripts <cleaned_transcripts>
+#Outputs:
+# -o, --output <output>
+#Options:
+# --pasadb <pasadb>
+
+#module load fasta
+module unload intel
+cd ${UPDATE_DIR}
+#ln -s ${current_annot} evm.gff3
+${pasa_home}/scripts/Launch_PASA_pipeline.pl -c ${update_config} -A -g ${genome} -t ${cleaned_transcripts} -L --annots_gff3 ${current_annot}
+${pasa_home}/scripts/dump_valid_annot_updates.dbi -M  ${pasadb} -V -R -g ${genome} > ${output}
+             
+if [ "$?" != "0" ];
+then 
+    echo "Error in running annotation update step. Removing outputs." >> ${global_log}
+    exit 2
+else
+    echo "Annotation update: done!" >> ${global_log}
+fi

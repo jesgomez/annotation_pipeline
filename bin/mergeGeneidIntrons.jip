@@ -1,0 +1,33 @@
+#!/usr/bin/env jip
+#Join all geneid with introns predictions in a unique file and adapt them to EVM.
+#
+#Usage:
+# mergeGeneidIntrons.jip -g <global_log> -e <EVM_out> -p <EVM_DIR> -c <create_weights_file> -i <inputs>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -p, --EVM_DIR <EVM_DIR>                     Path to the EVM directory
+# -i, --inputs <inputs>...                    GFF3 files with the predictions for each chunk
+#
+#Outputs:
+# -e, --EVM_out <EVM_out>                     Output file for the geneid with introns predictions converted for EVM.
+#
+#Options:
+# -c, --create_weights_file <create_weights_file>     Command to run when creating the weights file line for Geneid with Introns predictions
+
+#%begin validate
+add_output('output_link', r('${EVM_DIR}/geneid_introns_predictions.gff3'))
+#%end
+
+cat ${inputs} | grep -v '#' | gawk '$3!="intron"' | sed 's/\tgeneid_v1.4\t/\tgeneid_introns\t/g' | sed 's/\tevidence\t/\tgeneid_introns\t/g' > ${EVM_out} 
+cd ${EVM_DIR}
+ln -s ${EVM_out} geneid_introns_predictions.gff3
+${create_weights_file}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in merging geneid with introns step. Removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Geneid with introns step: done!" >> ${global_log}
+fi

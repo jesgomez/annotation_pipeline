@@ -1,0 +1,50 @@
+#!/usr/bin/env jip
+#Run genemark
+#
+#Usage:
+# runGenemark.jip -m <genome_masked> -g <global_log> -e <home_dir> -d <dir> -o <out> -p <EVM_out> -q <EVM_DIR> --max_gap <max_gap> --min_contig <min_contig> --cores <cores> --max_contig <max_contig> -t <additional_genemark_options> -c <create_weights_file> 
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -m, --genome_masked <genome_masked>         File with the masked genome
+# -d, --dir <dir>                             Directory where the pipeline is run
+# -q, --EVM_DIR <EVM_DIR>                     Path to the EVM directory                  
+#
+#Outputs:
+# -o, --out <out>                             File to keep the results of this step, in gtf format
+# -p, --EVM_out <EVM_out>                     File to keep the results of this step converted for EVM
+#
+#Options:
+# --max_gap                                   
+# --min_contig
+# --max_contig
+# --cores
+# -t, --additional_genemark_options
+# -c, --create_weights_file                  Command to run when creating the weights file line for Genemark predictions
+
+#%begin validate
+add_output('output_link', r('${EVM_DIR}/genemark_predictions.gff3'))
+#%end
+
+cd $TMPDIR
+module unload intel
+cp ${genome_masked} genome_masked.gff3
+$GENEMARK_PATH/gmes_petap.pl --sequence genome_masked.gff3 --ES --max_gap ${max_gap} --min_contig ${min_contig} --cores ${cores} --max_contig ${max_contig} ${additional_genemark_options}
+cp genemark.gtf ${out}
+cd ${dir} 
+cat ${out} | ${home_dir}/scripts/gtf_to_gff2or3.pl -noaddstop -v 2.5 -ov 3 -mrna | grep -v codon | grep -v '#' > ${EVM_out}
+cd ${EVM_DIR}
+ln -s ${EVM_out} genemark_predictions.gff3
+${create_weights_file}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in genemark step. Removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Genemark step: done!" >> ${global_log}
+fi
+
+
+

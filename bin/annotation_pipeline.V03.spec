@@ -1,62 +1,65 @@
 {
     "jobs": {
-        "split_reference": {
-            "time": "00:10:00"
+        "split_reference*": {
+            "time": "00:10:00",
+            "priority": "highprio"
         },
         "process_junctions":{
             "time": "03:00:00"
         },
         "augustus_*":{
-            "queue": "development",
-            "account": "AA",
-            "extra": ["-C","AA"],
-            "time": "16h"
+            "time": "20h"
         },
         "merge*": {
             "time": "00:10:00"
         },
         "geneid_*":{
-            "time": "3h"
+            "time": "3h", 
+            "threads": "2"
         },
         "Genemark":{
-            "queue": "development",
-            "account": "AA",
-            "extra": ["-C","AA"],
-            "time": "12h"
-        },
-        "Genemark-ET":{
-            "queue": "development",
-            "account": "AA",
-            "extra": ["-C","AA"],
-            "time": "12h"
-        },
-        "Glimmer":{
-            "queue": "development",
-            "account": "AA",
-            "extra": ["-C","AA"],
-            "time": "12h"
-        },
-        "spaln":{
-            "queue": "development",
-            "account": "AA",
-            "extra": ["-C","AA"],
-            "time": "6h"
-        },
-        "Clean_transcripts": {
-            "time": "00:10:00"
-        },
-        "Pasa":{
             "queue": "development",
             "account": "AA",
             "extra": ["-C","AA"],
             "time": "48h",
             "priority": "lowprio"
         },
+        "Genemark-ET":{
+            "queue": "development",
+            "account": "AA",
+            "extra": ["-C","AA"],
+            "time": "48h",
+            "priority": "lowprio"
+        },
+        "Glimmer":{
+            "queue": "development",
+            "account": "AA",
+            "extra": ["-C","AA"],
+            "time": "48h",
+            "priority": "lowprio"
+        },
+        "spaln":{
+            "queue": "development",
+            "account": "AA",
+            "extra": ["-C","AA"],
+            "time": "20h"
+        },
+        "Clean_transcripts": {
+            "time": "00:10:00",
+            "priority": "highprio"
+        },
+        "Pasa":{
+            "queue": "development",
+            "account": "AA",
+            "extra": ["-C","AA"],
+            "time": "72h",
+            "priority": "lowprio"
+        },
         "Transdecoder":{
             "queue": "development",
             "account": "AA",
             "extra": ["-C","AA"],
-            "time": "3h"
+            "time": "12h"
         },
         "EVM_*":{
             "queue": "himem",
@@ -67,11 +70,23 @@
         "Select_evm":{
             "time": "3h"   
         },
-        "Annotation_Update":{
-            "queue": "development",
-            "account": "AA",
-            "extra": ["-C","AA"],
-            "time": "10h"
+        "Annotation_Update*":{
+            "time": "24h",
+            "threads": 2
+        },
+        "cmsearch":{
+            "queue": "himem",
+            "time": "48h",
+            "priority": "lowprio"
+        },
+        "ncRNA_*":{
+             "time": "00:10:00"
+        },
+        "Blast*":{
+            "time": "3h"
+        },
+        "lncRNA":{
+            "time": "1h"
         }
     } 
 }

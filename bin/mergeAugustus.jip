@@ -1,0 +1,40 @@
+#!/usr/bin/env jip
+#Join all augustus in a unique file and adapt them to EVM.
+#
+#Usage:
+# mergeAugustus.jip -g <global_log> -o <out> -e <EVM_out> -p <EVM_DIR> -c <create_weights_file> -f <masked_chunks> -i <inputs>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -p, --EVM_DIR <EVM_DIR>                     Path to the EVM directory
+# -i, --inputs <inputs>...                    GFF3 files with the predictions for each chunk
+#
+#Outputs:
+# -o, --out <out>                             Output file for the augustus predictions.
+# -e, --EVM_out <EVM_out>                     Output file for the augustus predictions converted for EVM.
+#
+#Options:
+# -c, --create_weights_file <create_weights_file>     Command to run when creating the weights file line for Augustus predictions
+# -f, --masked_chunks <masked_chunks>             Number of chunks to make
+
+#%begin validate
+add_output('output_link', r('${EVM_DIR}/augustus_predictions.gff3'))
+#%end
+
+
+cat ${inputs} > ${out}
+
+
+$EVM_PATH/EvmUtils/misc/augustus_to_GFF3.pl ${out} > ${EVM_out}
+cd ${EVM_DIR}
+ln -s ${EVM_out} augustus_predictions.gff3
+${create_weights_file}
+
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in merging augustus step. Removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Augustus step: done!" >> ${global_log}
+fi

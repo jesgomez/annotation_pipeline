@@ -1,0 +1,26 @@
+#!/usr/bin/env jip
+#Run ncRNA annotation
+#
+#Usage:
+# runGetncRNAannotation.jip -g <global_log> -e <home_dir> -d <ncRNA_DIR> --blast_proteins_dir <blast_proteins_dir> --blast_annotated_dir <blast_annotated_dir>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -d, --ncRNA_DIR <ncRNA_DIR> 
+# 
+#Outputs:
+# 
+#Options:
+#
+
+#cd ${ncRNA_DIR}
+cat ${blast_proteins_dir}/*.out | gawk '$13<0.00001' > ${ncRNA_DIR}/proteins.blastp.out
+cat ${blast_annotated_dir}/*.out | gawk '$13<0.00001' > ${ncRNA_DIR}/annotated.blastp.out
+
+#cd ${ncRNA_DIR}
+cat ${ncRNA_DIR}/proteins.blastp.out ${ncRNA_DIR}/annotated.blastp.out | cut -f 2 | sort |uniq > ${ncRNA_DIR}/pseudogenes.ids
+
+
+
+#${home_dir}/scripts/annotate_ncRNAs.pl cmsearch.tbl trnascan_turbot.out SMAX5 A

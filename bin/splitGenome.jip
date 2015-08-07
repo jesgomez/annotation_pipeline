@@ -1,0 +1,34 @@
+#!/usr/bin/env jip
+#Split genome into chunks
+#
+#Usage:
+# splitGenome.jip -d <dir_chunks> -r <genome_reference> -n <name_reference> -g <global_log> -e <home_dir> -f <genome_chunks>
+#
+#Inputs:
+# -d, --dir_chunks <dir_chunks>               Directory to keep the chunks
+# -r, --genome_reference <genome_reference>   Genome reference file
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+#
+#Options:
+# -n, --basename_reference <basename_reference>       Name of the reference
+# -f, --genome_chunks <genome_chunks>         Number of chunks to make
+#
+
+#%begin validate
+chunks = int(str(genome_chunks)) + 1
+for k in range (1, chunks):
+    add_output('output_' + str(k), r('${dir_chunks}/${basename_reference}.${k}.fa'))
+#%end
+
+cd ${dir_chunks}  
+ln -s  ${genome_reference} ${basename_reference}.fa 
+${home_dir}/scripts/fasta2chunks.pl -f ${basename_reference}.fa -n ${genome_chunks}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in fasta2chunks.pl removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Step split genome into ${genome_chunks} chunks: done!" >> ${global_log}
+fi

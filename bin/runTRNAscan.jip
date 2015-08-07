@@ -1,0 +1,26 @@
+#!/usr/bin/env jip
+#Run tRNAscan
+#
+#Usage:
+# runTRNAscan.jip -r <genome_chunk> -g <global_log> -e <home_dir> -o <out> -l <log> -m <stats>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+#
+#Outputs:
+# -o, --out <out>                             File to keep the results of this step
+# -l, --log <log>                             
+# -m, --stats <stats>                         
+#
+#Options:
+# -r, --genome_chunk <genome_chunk>           Chunk of the genome
+#
+
+tRNAscan-SE -b -o ${out} -l ${log} -m ${stats} ${genome_chunk}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in tRNAscan step. Removing outputs\n" >> ${global_log}
+    exit 2
+fi

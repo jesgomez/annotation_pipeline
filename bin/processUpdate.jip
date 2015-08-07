@@ -1,0 +1,43 @@
+#!/usr/bin/env jip
+#Run Annotation Update
+#
+#Usage:
+# processUpdate.jip -r <genome> -g <global_log> -e <home_dir> -q <EVM_DIR> -u <UPDATE_DIR> --pasa_updates <pasa_updates> -a <EVM_out> --pasadb <pasadb> -i <geneid_parameters> -j <project> -v <version> -o <output> --protein_output <protein_output>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -r, --genome <genome>                       File with the genome
+# -q, --EVM_DIR <EVM_DIR>                     Path to the EVM directory
+# -u, --UPDATE_DIR <UPDATE_DIR>
+# -a, --EVM_out <EVM_out>
+# --pasa_updates <pasa_updates>               Output of pasa update step
+# -t, --transcripts <transcripts>
+# -c, --cleaned_transcripts <cleaned_transcripts>
+# -i, --geneid_parameters <geneid_parameters> File with the geneid parameters for the species
+#Outputs:
+# -o, --output <output>
+# --protein_output <protein_output>
+#Options:
+# --pasadb <pasadb>
+# -j, --project <project>
+# -v, --version <version>
+
+cd ${UPDATE_DIR}
+${home_dir}/scripts/process_pasa_update.V3.pl ${pasa_updates} ${EVM_out} > ${UPDATE_DIR}/${pasadb}.processed_updates.gff3
+${home_dir}/scripts/framefixer.pl -v -s ${genome} -param ${geneid_parameters} ${pasadb}.processed_updates.gff3 > ${UPDATE_DIR}/${pasadb}.ff.gff3 2> ${UPDATE_DIR}/${pasadb}.ff.log
+${home_dir}/scripts/assignIDs_generic_fast.pl -a ${pasadb}.ff.gff3 -project ${project} -V ${version}
+cat *.${project}.${version}.gff3 | ${home_dir}/scripts/nmd_filter.pl > ${UPDATE_DIR}/${project}${version}.gff3
+ln -s ${genome} genome.fa
+${home_dir}/scripts/CDS2seq.v2.pl -gff ${project}${version}.gff3 -seq genome.fa
+${home_dir}/scripts/get_longest_peptide.pl ${project}${version}.pep.fa > ${UPDATE_DIR}/${project}${version}.longestpeptide.fa 
+                    #   "${home_dir}/scripts/gff_stats_longest_transcripts.pl -a ${project}${version}.gff3 -g ${genome} " +\
+                    #   " > ${project}${version}.stats.tsv"))if [ "$?" != "0" ];
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in running annotation update step. Removing outputs." >> ${global_log}
+    exit 2
+else
+    echo "Protein coding gene annotation: done!" >> ${global_log}
+fi

@@ -1,0 +1,51 @@
+#!/usr/bin/env jip
+#Run spaln
+#
+#Usage:
+# runSpaln.jip -r <genome> -g <global_log> -e <home_dir> -p <EVM_DIR> -o <out_cds> -n <out_gene> --proteins <proteins> --dir_db <dir_db> -O <spaln_O> --spaln_ya <spaln_ya> -M <spaln_M> -t <threads> -Q <spaln_Q> -c <create_weights_file>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -p, --EVM_DIR <EVM_DIR>                     Path to the EVM directory
+# -r, --genome <genome>                       File with the genome
+# --proteins <proteins>                       File with the proteins to map in fasta format
+#
+#Outputs:
+# -o, --out_cds <out_cds>                     File to keep the results of this step, in gff cds format.
+# -n, --out_gene <out_gene>                   File to keep the results of this step, in gff gene format. 
+#
+#Options:
+# --dir_db <dir_db>                           Directory to keep the spaln db.
+# -O, --spaln_O <spaln_O>           
+# --spaln_ya <spaln_ya>
+# -M, --spaln_M <spaln_M>
+# -t, --threads <threads>
+# -Q, --spaln_Q <spaln_Q>
+# -c, --create_weights_file <create_weights_file>     Command to run when creating the weights file line for Augustus predictions
+
+
+#%begin validate
+add_output('output_link', r('${EVM_DIR}/proteins.gff3'))
+#%end
+
+cd ${dir_db}
+ln -s ${genome} genome.fa
+ 
+spaln_build genome.idx
+spaln_build genome.bkp
+export printenv ALN_DBS=${dir_db}
+cd -
+spaln -O${spaln_O} -ya${spaln_ya} -M${spaln_M} -t${threads} -dgenome -Q${spaln_Q} ${proteins} > ${out_gene}
+gawk '$3=="cds"'  ${out_gene} > ${out_cds}
+cd ${EVM_DIR} 
+ln -s ${out_cds} proteins.gff3
+${create_weights_file}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in running spaln step. Removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Spaln step: done!" >> ${global_log}
+fi

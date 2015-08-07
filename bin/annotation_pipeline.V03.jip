@@ -1,0 +1,840 @@
+#!/usr/bin/env jip
+#
+# Usage:
+#     annotation_pipeline.V01.jip [-c <cfg>] [--version]
+#
+# Inputs:
+#     -c, --cfg <cfg>          Configuration json file generated with create_config_file.py
+# Options:
+#     --version                Shows annotation_pipeline version
+#                              [default: false]
+
+#Author: Jessica Gomez, CNAG.
+#Contact email: jgomez@pcb.ub.cat
+#Date:03242015
+
+
+__VERSION__ = "3.0"
+
+#%begin pipeline
+import os
+import os.path
+import json
+import sys
+
+def parserJsonFile(jsonFile):
+    '''Parser a json file and retorns a dictionary 
+    Parameters:
+    jsonFile -- Path to the json file configuration
+    Returns.
+    Dictionary json representation
+    '''
+    import json
+    with open(jsonFile) as json_file:
+        dictionary = json.load(json_file)
+
+    return dictionary
+
+# TODO: 0.1 PRINT VERSION
+#if r("${version}") == True:
+#    print __VERSION__
+#    sys.exit(0)
+
+#0.2 GET PARAMETERS
+jsonConfig = r("${cfg}")
+
+
+#1. GET JSON DICTIONARY
+cfg = parserJsonFile(jsonConfig)
+
+#2. GET GENERAL INPUTS 
+EVM_DIR = cfg["Outputs"]["EVM_dir"]
+if not os.path.exists(EVM_DIR):
+    os.makedirs(EVM_DIR)
+HOME = cfg["Parameters"]["pipeline_HOME"]
+job_junctions = False
+DIR = os.getcwd()
+DIR_out = DIR + "/log/"
+if not os.path.exists(DIR_out):
+    os.makedirs(DIR_out)
+i = 0
+right_log = False
+while right_log != True:
+    i = i + 1
+    if not os.path.exists(DIR_out + "pipeline_run." + str(i)):
+        right_log = True
+        main_log=open(DIR_out + "pipeline_run." + str(i), 'w+')
+        main_log.write('Starting pipeline run ' + str(i) + '\n')
+        global_log = DIR_out + "pipeline_run." + str(i)
+
+#2.1.2 Get genome masked
+if cfg["Parameters"]["run_augustus"] or cfg["Parameters"]["run_geneid"] or cfg["Parameters"]["run_genemark"] or cfg["Parameters"]["run_glimmer"] or cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]: 
+
+    masked_reference = cfg["Inputs"]["genome_masked"]
+
+    name_reference = os.path.basename(masked_reference)
+    repls = ('.fa', ''), ('.fasta', '')
+    clean_reference_name = reduce(lambda a, kv: a.replace(*kv), repls, name_reference)
+
+    #2.1.2 Split masked genome
+    if cfg["Parameters"]["run_augustus"] or cfg["Parameters"]["run_geneid"] or cfg["Parameters"]["run_geneid_introns"]or cfg["Parameters"]["run_augustus_introns"]:
+        dirChunks = cfg["Outputs"]["dir_masked_chunks"] 
+        dirChunksOut = dirChunks + "/out/"
+        if not os.path.exists(dirChunksOut):
+            os.makedirs(dirChunksOut)
+
+        masked_chunks = cfg["Chunks"]["masked_chunks"]
+
+        jobSplitMasked = job("split_reference",
+        log=dirChunksOut + "chunks.err",\
+        out=dirChunksOut + "chunks.out").\
+        run('splitMask',masked_reference=masked_reference,dir_chunks=dirChunks,\
+            basename_reference=clean_reference_name,global_log=str(global_log),home_dir=HOME, masked_chunks=str(masked_chunks))
+
+#2.2 Get genome
+if cfg["Parameters"]["run_spaln"] or cfg["Parameters"]["run_pasa"] or cfg["Parameters"]["run_transdecoder"] or cfg["Parameters"]["run_evm"] or cfg["Parameters"]["run_update"] or cfg["Parameters"]["run_ncRNA_annotation"]:
+    genome_reference = cfg["Inputs"]["genome"]
+
+    name_reference_genome = os.path.basename(genome_reference)
+    repls = ('.fa', ''), ('.fasta', '')
+    clean_reference_genome_name = reduce(lambda a, kv: a.replace(*kv), repls, name_reference_genome)
+
+    #2.2.2 Split reference genome
+    if cfg["Parameters"]["run_ncRNA_annotation"]:
+        dirGenomeChunks = cfg["Outputs"]["dir_genome_chunks"] 
+        dirGenomeChunksOut = dirGenomeChunks + "/out/"
+        if not os.path.exists(dirGenomeChunksOut):
+            os.makedirs(dirGenomeChunksOut)
+
+        genome_chunks = cfg["Chunks"]["genome_chunks"]
+        prev_chunks_genome = False
+        jobSplitGenome = job("split_reference_genome",\
+        log = dirGenomeChunksOut + "chunks.err", \
+        out = dirGenomeChunksOut + "chunks.out").\
+        run('splitGenome',genome_reference=genome_reference,dir_chunks=dirGenomeChunks,\
+                basename_reference=clean_reference_genome_name,global_log=str(global_log),home_dir=HOME, genome_chunks=str(genome_chunks))
+
+#2.3 Get junctions
+if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]:
+    junctions = cfg["Inputs"]["junctions"]
+    junctions_basename = os.path.basename(junctions)
+    if cfg["Inputs"]["incoding_junctions"]:
+        out_incoding_junctions = cfg["Inputs"]["incoding_junctions"]
+    else:
+        dirJunctions =  cfg["Outputs"]["dir_process_junctions"]
+        out_incoding_junctions = dirJunctions + "/" + junctions_basename + ".inCoding.gff"
+
+##################################################################################################
+################# AUGUSTUS                                                            ############
+##################################################################################################
+
+if cfg["Parameters"]["run_augustus"]:
+    #4.Augustus
+    out_prediction_augustus = cfg["Outputs"]["augustus_prediction"]
+    out_evm_augustus =cfg["Outputs"]["augustus_preEVM"]
+    EVM_DIR = cfg["Outputs"]["EVM_dir"]
+    if not os.path.exists(EVM_DIR):
+        os.makedirs(EVM_DIR)
+
+    #4.1 Ouput Augustus
+    dirAugustusOutput = os.path.dirname(out_prediction_augustus)
+    dirAugustusOutputOut = dirAugustusOutput + "/out/"
+    if not os.path.exists(dirAugustusOutputOut):
+        os.makedirs(dirAugustusOutputOut)
+
+    #4.2 Get Augustus parameters
+    species = cfg["Inputs"]["species"]
+    alternatives_from_sampling = cfg["augustus"]["aug_alternatives_from_sampling"]
+    uniqueGeneId = cfg["augustus"]["aug_uniqueGeneId"]
+    gff3 = cfg["augustus"]["aug_gff3"]
+    sample = cfg["augustus"]["aug_sample"]
+    noInFrameStop = cfg["augustus"]["aug_noInFrameStop"]
+    maxtracks = cfg["augustus"]["aug_maxtracks"]
+    singlestrand = cfg["augustus"]["aug_singlestrand"]
+    strand = cfg["augustus"]["aug_strand"]
+    min_intron_len= cfg["augustus"]["aug_min_intron_len"]
+    augustus_weights = cfg["augustus"]["augustus_weights"]
+    additional_aug_opts = ''
+    if cfg["augustus"]["additional_augustus_options"]:
+        additional_aug_opts = cfg["augustus"]["additional_augustus_options"]
+    masked_chunks = cfg["Chunks"]["masked_chunks"]
+
+    #4.3 Define 1 Job per each masked reference fragment
+    listAugustusJobs = []
+
+    for i in range(1,masked_chunks+1):
+        jobAugustus = job("augustus_" + str(i) ,\
+            log = dirAugustusOutputOut + "augustus_" + str(i) + ".err", \
+            out = dirAugustusOutputOut + "augustus_" + str(i) + ".out").\
+            run('runAugustus', masked_chunk=dirChunks + "/" + clean_reference_name + "." + str(i) + ".fa", global_log=str(global_log), home_dir=HOME, out=out_prediction_augustus + "." + str(i), species=species, alternatives_from_sampling=alternatives_from_sampling, sample=str(sample), gff3=gff3, noInFrameStop=noInFrameStop, uniqueGeneId=uniqueGeneId, maxtracks=str(maxtracks), strand=strand, singlestrand=singlestrand, min_intron_len=str(min_intron_len), additional=additional_aug_opts)  
+        listAugustusJobs.append(jobAugustus)
+
+    #4.4 Merging Augustus and adapting to evm 
+
+    create_weights_file = ""
+    f = 1
+    for i in augustus_weights:
+        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\tAugustus\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobMergingAugustus = job("merge_evm",\
+       log = dirAugustusOutputOut + "merge_evm_aug.err", \
+       out = dirAugustusOutputOut + "merge_evm_aug.out").\
+       run('mergeAugustus', global_log=str(global_log), EVM_DIR=EVM_DIR, out=out_prediction_augustus, EVM_out=out_evm_augustus, create_weights_file=create_weights_file, masked_chunks = str(masked_chunks), inputs = listAugustusJobs)
+
+##################################################################################################
+################# GENEID                                                              ############
+##################################################################################################
+
+if cfg["Parameters"]["run_geneid"]:
+    #5. GENEID
+    out_prediction_geneid = cfg["Outputs"]["geneid_prediction"]
+    out_evm_geneid =  cfg["Outputs"]["geneid_preEVM"]   
+    EVM_DIR = cfg["Outputs"]["EVM_dir"]
+    if not os.path.exists(EVM_DIR):
+        os.makedirs(EVM_DIR)
+
+    #5.1 Path Output GENEID
+    dirGeneidOutput = os.path.dirname(out_prediction_geneid)
+    dirGeneidOutputOut = dirGeneidOutput + "/out/"
+    if not os.path.exists(dirGeneidOutputOut):
+        os.makedirs(dirGeneidOutputOut)
+
+    #5.2 Get GENEID parameters
+    geneid_parameters = cfg["Inputs"]["geneid_parameters"]
+    geneid_options = "-" + cfg["geneid"]["geneid_options"]
+    geneid_weights = cfg["geneid"]["geneid_weights"] 
+
+    #5.3 Define 1 Job per each masked genome fragment
+    listGeneidJobs = []
+
+    for i in range(1,masked_chunks+1):
+        jobGeneid = job("geneid_" + str(i) ,\
+           log = dirGeneidOutputOut + "geneid_" + str(i) + ".err", \
+           out = dirGeneidOutputOut + "geneid_" + str(i) + ".out").\
+           run('runGeneid', genome_chunk=dirChunks + "/" + clean_reference_name + "." + str(i) + ".fa", global_log=str(global_log), home_dir=HOME, out=out_prediction_geneid + "." + str(i), geneid_parameters=geneid_parameters, geneid_options=geneid_options)
+        listGeneidJobs.append(jobGeneid)
+
+    #5.4 Merging GENEID and adapting to evm 
+    create_weights_file = ""
+    f = 1
+    for i in geneid_weights:
+        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\tgeneid_v1.4\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobMergingGeneId = job("merge_evm",\
+       log = dirGeneidOutputOut + "merge_evm.err", \
+       out = dirGeneidOutputOut + "merge_evm.out").\
+       run('mergeGeneid', global_log=str(global_log), EVM_DIR=EVM_DIR, EVM_out=out_evm_geneid, create_weights_file=create_weights_file, inputs = listGeneidJobs)
+
+##################################################################################################
+################# GENEMARK                                                            ############
+##################################################################################################
+
+if cfg["Parameters"]["run_genemark"]:
+    #6. GENEMARK
+    out_prediction_genemark = cfg["Outputs"]["genemark_prediction"]
+    out_evm_genemark = cfg["Outputs"]["genemark_preEVM"]  
+    EVM_DIR =  cfg["Outputs"]["EVM_dir"]
+    if not os.path.exists(EVM_DIR):
+        os.makedirs(EVM_DIR)
+
+    #6.1 Path Output GENEMARK
+    dirGenemarkOutput = os.path.dirname(out_prediction_genemark)
+    dirGenemarkOutputOut = dirGenemarkOutput + "/out/"
+    if not os.path.exists(dirGenemarkOutputOut):
+        os.makedirs(dirGenemarkOutputOut)
+
+    #6.2 Get GENEMARK parameters
+    max_gap = cfg["genemark"]["gmk_max_gap"]
+    min_contig = cfg["genemark"]["gmk_min_contig"]
+    max_contig = cfg["genemark"]["gmk_max_contig"]
+    genemark_cores = cfg["genemark"]["gmk_cores"]
+    genemark_weights = cfg["genemark"]["genemark_weights"] 
+    additional_genemark_opts = ''
+    if cfg["genemark"]["additional_genemark_options"]:
+        additional_genemark_opts = cfg["genemark"]["additional_genemark_options"]
+
+    #6.3 Run GENEMARK and adapting to EVM
+
+
+    create_weights_file = ""
+    f = 1
+    for i in genemark_weights:
+        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\tGeneMark.hmm\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobGenemark = job("Genemark",threads=genemark_cores,\
+        log = dirGenemarkOutputOut + "genemark.err", \
+        out = dirGenemarkOutputOut + "genemark.out").\
+        run('runGenemark', global_log=str(global_log), EVM_DIR=EVM_DIR, out=out_prediction_genemark, EVM_out=out_evm_genemark, create_weights_file=create_weights_file, genome_masked=masked_reference, home_dir=HOME, dir=DIR, max_gap=str(max_gap), min_contig= str(min_contig), cores=str(genemark_cores), max_contig=str(max_contig), additional_genemark_options=additional_genemark_opts)
+
+##################################################################################################
+################# GLIMMER                                                             ############
+##################################################################################################
+
+if cfg["Parameters"]["run_glimmer"]:
+    #7. GLIMMER  
+    out_prediction_glimmer = cfg["Outputs"]["glimmer_prediction"]
+    out_evm_glimmer = cfg["Outputs"]["glimmer_preEVM"]  
+    EVM_DIR =  cfg["Outputs"]["EVM_dir"]
+    if not os.path.exists(EVM_DIR):
+        os.makedirs(EVM_DIR)
+
+    #7.1 Path Output GLIMMER
+    dirGlimmerOutput = os.path.dirname(out_prediction_glimmer)
+    dirGlimmerOutputOut = dirGlimmerOutput + "/out/"
+    if not os.path.exists(dirGlimmerOutputOut):
+        os.makedirs(dirGlimmerOutputOut)
+
+    #7.2 Get GLIMMER parameters
+    trained = cfg["Inputs"]["glimmer_directory"]
+    glimmer_weights = cfg["glimmer"]["glimmer_weights"] 
+
+    #7.3 Run GLIMMER and adapting to EVM
+
+    create_weights_file = ""
+    f = 1
+    for i in glimmer_weights:
+        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\tGlimmerHMM\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobGlimmer = job("Glimmer",\
+        log = dirGlimmerOutputOut + "glimmer.err", \
+        out = dirGlimmerOutputOut + "glimmer.out").\
+        run('runGlimmer', global_log=str(global_log), EVM_DIR=EVM_DIR, out=out_prediction_glimmer, EVM_out=out_evm_glimmer, create_weights_file=create_weights_file, genome_masked=masked_reference, home_dir=HOME, dir=DIR, trained_glimmer_directory=trained)
+
+##################################################################################################
+################# SPALN                                                               ############
+##################################################################################################
+
+if cfg["Parameters"]["run_spaln"]:
+    #8. SPALN  
+
+    out_spaln_gene_mappings = cfg["Outputs"]["spaln_gene"]
+    out_spaln_cds_mappings =  cfg["Outputs"]["spaln_cds"]
+    EVM_DIR =  cfg["Outputs"]["EVM_dir"]
+
+    #8.1 Path Output SPALN
+    dirSpalnOutput = os.path.dirname(out_spaln_gene_mappings)
+    dirSpalnOutputOut = dirSpalnOutput + "/out/"
+    if not os.path.exists(dirSpalnOutputOut):
+        os.makedirs(dirSpalnOutputOut)
+
+    dirDB = dirSpalnOutput + "/spaln_db/"
+#    dirDBOut = dirDB + "/out/"
+    if not os.path.exists(dirDB):
+        os.makedirs(dirDB)
+
+    #8.2 Get SPALN parameters
+    proteins = cfg["Inputs"]["proteins"]
+    ya = cfg["spaln"]["spaln_ya"]
+    Q = cfg["spaln"]["spaln_Q"]
+    M = cfg["spaln"]["spaln_M"]
+    t = cfg["spaln"]["spaln_t"]
+    O = cfg["spaln"]["spaln_O"]
+    spaln_weights = cfg["spaln"]["spaln_weights"]
+
+    #8.3 make database and run spaln 
+    create_weights_file = ""
+    f = 1
+    for i in spaln_weights:
+        create_weights_file = create_weights_file + "echo 'PROTEIN\tALN\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobSpaln = job("spaln",threads=t,\
+       log = dirSpalnOutputOut + "spaln.err", \
+       out = dirSpalnOutputOut + "spaln.out").\
+       run('runSpaln', global_log=str(global_log), EVM_DIR=EVM_DIR, out_gene=out_spaln_gene_mappings, out_cds=out_spaln_cds_mappings, create_weights_file=create_weights_file, genome=genome_reference, home_dir=HOME, proteins=proteins, dir_db=dirDB, spaln_O = str(O), spaln_ya=str(ya), spaln_M=str(M), threads=str(t), spaln_Q=str(Q))
+
+##################################################################################################
+################# INCODING JUNCTIONS                                                  ############
+##################################################################################################
+if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]:
+    #9.INCODING JUNCTIONS 
+    #9.1 Path Output INCODING JUNCTIONS
+    dirJunctions =  cfg["Outputs"]["dir_process_junctions"]
+    dirJunctionsOut = dirJunctions + "/out/"
+    if not os.path.exists(dirJunctionsOut):
+        os.makedirs(dirJunctionsOut)   
+
+    #9.2 Junctions parameters
+
+    #9.3 Get incoding junctions
+    job_junctions = True
+    jobJunctions = job("process_junctions",\
+    log = dirJunctionsOut + "junctions.err", \
+    out = dirJunctionsOut + "junctions.out").\
+    run('getIncodingJunctions', working_junctions_dir=dirJunctions, global_log=str(global_log), home_dir=HOME, spaln_cds= jobSpaln.out_cds, junctions=junctions, junctions_basename=junctions_basename, geneid_out=jobMergingGeneId.EVM_out, augustus_out=jobMergingAugustus.EVM_out, out=out_incoding_junctions)
+
+##################################################################################################
+################# GENEID INTRONS                                                      ############
+##################################################################################################
+
+if cfg["Parameters"]["run_geneid_introns"]:
+    #10. GENEID INTRONS
+    out_prediction_geneid_introns = cfg["Outputs"]["geneid_introns_prediction"]
+    out_evm_geneid_introns = cfg["Outputs"]["geneid_introns_preEVM"]   
+    EVM_DIR = cfg["Outputs"]["EVM_dir"]
+
+    #10.1 Path Output GENEID INTRONS
+    dirGeneidIntronsOutput = os.path.dirname(out_prediction_geneid_introns)
+    dirGeneidIntronsOutputOut = dirGeneidIntronsOutput + "/out/"
+    if not os.path.exists(dirGeneidIntronsOutputOut):
+        os.makedirs(dirGeneidIntronsOutputOut)
+
+    #10.2 Get GENEID INTRONS parameters
+    geneid_parameters = cfg["Inputs"]["geneid_parameters"]
+    geneid_introns_options = "-" + cfg["geneid_introns"]["geneid_introns_options"]
+    geneid_introns_weights = cfg["geneid_introns"]["geneid_introns_weights"] 
+
+    #10.3 Define 1 Job per each masked genome fragment
+    listGeneidIntronsJobs = []
+
+    for i in range(1,masked_chunks+1):
+        jobGeneidIntrons = job("geneid_introns_" + str(i) ,\
+            log = dirGeneidIntronsOutputOut + "geneid_introns_" + str(i) + ".err", \
+            out = dirGeneidIntronsOutputOut + "geneid_introns_" + str(i) + ".out").\
+            run('runGeneidIntrons', genome_chunk=dirChunks + "/" + clean_reference_name + "." + str(i) + ".fa", global_log=str(global_log), home_dir=HOME, out=out_prediction_geneid_introns + "." + str(i), geneid_parameters=geneid_parameters, geneid_introns_options=geneid_introns_options, incoding_junctions = jobJunctions.out)
+        listGeneidIntronsJobs.append(jobGeneidIntrons)
+
+    #10.4 Merging GENEID INTRONS and adapting to evm 
+    create_weights_file = ""
+    f = 1
+    for i in geneid_introns_weights:
+        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\tgeneid_introns\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobMergingGeneIdIntrons = job("merge_evm",\
+       log = dirGeneidIntronsOutputOut + "merge_evm.err", \
+       out = dirGeneidIntronsOutputOut + "merge_evm.out").\
+       run('mergeGeneidIntrons', global_log=str(global_log), EVM_DIR=EVM_DIR, EVM_out=out_evm_geneid_introns, create_weights_file=create_weights_file, inputs = listGeneidIntronsJobs)
+
+##################################################################################################
+################# AUGUSTUS INTRONS                                                    ############
+##################################################################################################
+
+if cfg["Parameters"]["run_augustus_introns"]:
+    #11. AUGUSTUS INTRONS
+    out_prediction_augustus_introns = cfg["Outputs"]["augustus_introns_prediction"]
+    out_evm_augustus_introns = cfg["Outputs"]["augustus_introns_preEVM"]   
+    EVM_DIR = cfg["Outputs"]["EVM_dir"]
+
+    #11.1 Path Output AUGUSTUS INTRONS
+    dirAugustusIntronsOutput = os.path.dirname(out_prediction_augustus_introns)
+    dirAugustusIntronsOutputOut = dirAugustusIntronsOutput + "/out/"
+    if not os.path.exists(dirAugustusIntronsOutputOut):
+        os.makedirs(dirAugustusIntronsOutputOut)
+
+    #11.2 Get AUGUSTUS INTRONS parameters
+    species = cfg["Inputs"]["species"]
+    extrinsic_file = cfg["Inputs"]["extrinsic_file_augustus_introns"]
+    alternatives_from_sampling = cfg["augustus"]["aug_alternatives_from_sampling"]
+    uniqueGeneId = cfg["augustus"]["aug_uniqueGeneId"]
+    gff3 = cfg["augustus"]["aug_gff3"]
+    sample = cfg["augustus"]["aug_sample"]
+    noInFrameStop = cfg["augustus"]["aug_noInFrameStop"]
+    maxtracks = cfg["augustus"]["aug_maxtracks"]
+    singlestrand = cfg["augustus"]["aug_singlestrand"]
+    strand = cfg["augustus"]["aug_strand"]
+    min_intron_len= cfg["augustus"]["aug_min_intron_len"]
+    augustus_introns_weights = cfg["augustus_introns"]["augustus_introns_weights"]
+    additional_augustus_introns_options = ''
+    if cfg["augustus_introns"]["additional_augustus_introns_options"]:
+        additional_augustus_introns_options = cfg["augustus_introns"]["additional_augustus_introns_options"]
+
+    #11.3 Define 1 Job per each masked genome fragment
+    listAugustusIntronsJobs = []
+
+    for i in range(1,masked_chunks+1):
+        jobAugustusIntrons = job("augustus_introns_" + str(i) ,\
+            log = dirAugustusIntronsOutputOut + "augustus_introns_" + str(i) + ".err", \
+            out = dirAugustusIntronsOutputOut + "augustus_introns_" + str(i) + ".out").\
+            run('runAugustusIntrons', masked_chunk=dirChunks + "/" + clean_reference_name + "." + str(i) + ".fa", global_log=str(global_log), home_dir=HOME, out=out_prediction_augustus_introns + "." + str(i), incoding_junctions = jobJunctions.out, extrinsic_file=extrinsic_file,  species=species, alternatives_from_sampling=alternatives_from_sampling, sample=str(sample), gff3=gff3, noInFrameStop=noInFrameStop, uniqueGeneId=uniqueGeneId, maxtracks=str(maxtracks), strand=strand, singlestrand=singlestrand, min_intron_len=str(min_intron_len), additional=additional_augustus_introns_options)
+        listAugustusIntronsJobs.append(jobAugustusIntrons)
+
+    #11.4 Merging AUGUSTUS INTRONS and adapting to evm 
+    create_weights_file = ""
+    f = 1
+    for i in augustus_introns_weights:
+        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\taugustus_introns\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobMergingAugustusIntrons = job("merge_evm",\
+       log = dirAugustusIntronsOutputOut + "merge_evm.err", \
+       out = dirAugustusIntronsOutputOut + "merge_evm.out").\
+       run('mergeAugustusIntrons', global_log=str(global_log), EVM_DIR=EVM_DIR, out=out_prediction_augustus_introns, EVM_out=out_evm_augustus_introns, create_weights_file=create_weights_file, masked_chunks = str(masked_chunks), inputs = listAugustusIntronsJobs)
+
+##################################################################################################
+################# GENEMARK-ET                                                         ############
+##################################################################################################
+
+if cfg["Parameters"]["run_genemark_ET"]:
+    #12. GENEMARK-ET
+    out_prediction_genemark_ET = cfg["Outputs"]["genemark_ET_prediction"]
+    out_evm_genemark_ET = cfg["Outputs"]["genemark_ET_preEVM"]  
+    EVM_DIR = cfg["Outputs"]["EVM_dir"]
+
+    #12.1 Path Output GENEMARK-ET
+    dirGenemarkETOutput = os.path.dirname(out_prediction_genemark_ET)
+    dirGenemarkETOutputOut = dirGenemarkETOutput + "/out/"
+    if not os.path.exists(dirGenemarkETOutputOut):
+        os.makedirs(dirGenemarkETOutputOut)
+
+    #12.2 Get GENEMARK-ET parameters
+    max_gap = cfg["genemark"]["gmk_max_gap"]
+    min_contig = cfg["genemark"]["gmk_min_contig"]
+    max_contig = cfg["genemark"]["gmk_max_contig"]
+    genemark_cores = cfg["genemark"]["gmk_cores"]
+    et_score = cfg["genemark-ET"]["gmk_et_score"] 
+    additional_genemark_ET_opts = ''
+    if cfg["genemark-ET"]["additional_genemark_ET_options"]:
+        additional_genemark_opts = cfg["genemark-ET"]["additional_genemark_ET_options"]
+
+    genemark_ET_weights = cfg["genemark-ET"]["genemark_ET_weights"] 
+
+    #12.3 Run GENEMARK-ET and adapting to EVM
+    create_weights_file = ""
+    f = 1
+    for i in genemark_ET_weights:
+        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\tGeneMark-ET\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobGenemarkET = job("Genemark-ET",threads=genemark_cores,\
+        log = dirGenemarkETOutputOut + "genemark-ET.err", \
+        out = dirGenemarkETOutputOut + "genemark-ET.out").\
+        run('runGenemark-ET', global_log=str(global_log), EVM_DIR=EVM_DIR, out=out_prediction_genemark_ET, EVM_out=out_evm_genemark_ET, create_weights_file=create_weights_file, genome_masked=masked_reference, home_dir=HOME, dir=DIR, max_gap=str(max_gap), min_contig= str(min_contig), cores=str(genemark_cores), max_contig=str(max_contig), additional_genemark_options=additional_genemark_ET_opts, incoding_junctions = jobJunctions.out, et_score=str(et_score))
+
+
+##################################################################################################
+################# PASA AND TRANSDECODER                                               ############
+##################################################################################################
+
+if cfg["Parameters"]["run_pasa"] or cfg["Parameters"]["run_transdecoder"]:
+    #13. PASA  
+
+    #13.1 Path Output PASA
+    dirPasaOutput = cfg["Outputs"]["pasa_dir"]
+    dirPasaOutputOut = dirPasaOutput + "/out/"
+    if not os.path.exists(dirPasaOutputOut):
+        os.makedirs(dirPasaOutputOut)
+    EVM_DIR = cfg["Outputs"]["EVM_dir"]
+    pasa_home = cfg["pasa"]["pasa_home"]
+    pasadb = cfg["Inputs"]["pasadb"]
+
+
+if cfg["Parameters"]["run_pasa"]:
+    #13.2 Get PASA parameters
+    transcripts =  cfg["Inputs"]["transcripts"]
+    configuration = cfg["Inputs"]["pasa_config"]
+    CPU = cfg["pasa"]["pasa_CPU"]
+    pasa_step = cfg["pasa"]["pasa_step"]
+    pasa_weights = cfg["pasa"]["pasa_weights"]
+    cufflinks = cfg["Inputs"]["cufflinks"]
+    if cfg["pasa"]["create_database"]:
+        step= "-C"
+    else:
+        step= "-s " + str(pasa_step)
+
+    #13.3 Clean transcripts
+    jobCleanTranscripts = job("Clean_transcripts",\
+       log = dirPasaOutputOut + "cln.err", \
+       out = dirPasaOutputOut + "cln.out").\
+       run('runCleanTranscripts', global_log=str(global_log), home_dir=HOME, PASA_DIR=dirPasaOutput, transcripts=transcripts, out=dirPasaOutput + "transcripts.fa.clean", transcripts_out_name= dirPasaOutput + "transcripts.fa")
+
+    #13.4 Run PASA
+    create_weights_file = ""
+    f = 1
+    for i in pasa_weights:
+        create_weights_file = create_weights_file + "echo 'TRANSCRIPT\tassembler-" + pasadb + "\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobPasa = job("Pasa",threads=CPU,\
+       log = dirPasaOutputOut + "pasa.err", \
+       out = dirPasaOutputOut + "pasa.out").\
+       run('runPasa', genome=genome_reference, global_log=str(global_log),home_dir=HOME,PASA_DIR=dirPasaOutput, dir=DIR, pasa_home=pasa_home, config_file=configuration, transcripts=jobCleanTranscripts.transcripts_out_name, cleaned_transcripts=jobCleanTranscripts.out, CPU=CPU, EVM_DIR=EVM_DIR, pasadb=pasadb, create_weights_file=create_weights_file, step = step, cufflinks=cufflinks, output=dirPasaOutput + "/" + pasadb + ".pasa_assemblies.gff3")
+
+if cfg["Parameters"]["run_transdecoder"]:
+    transdecoder_weights = cfg["transdecoder"]["transdecoder_weights"]
+    #13.5 Run TRANSDECODER
+    create_weights_file = ""
+    f = 1
+    for i in transdecoder_weights:
+        create_weights_file = create_weights_file + "echo 'OTHER_PREDICTION\ttransdecoder\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+        f = f + 1
+
+    jobTransdecoder = job("Transdecoder",\
+        log = dirPasaOutputOut + "transdecoder.err", \
+        out = dirPasaOutputOut + "transdecoder.out").\
+        run('runTransdecoder', genome=genome_reference, global_log=str(global_log),home_dir=HOME,PASA_DIR=dirPasaOutput, dir=DIR, pasa_home=pasa_home, transcripts_gff3=jobPasa, EVM_DIR=EVM_DIR, pasadb=pasadb,create_weights_file=create_weights_file, output=dirPasaOutput + "/" + pasadb + ".assemblies.fasta.transdecoder.genome.gff3")
+
+##################################################################################################
+################# EVM                                                          ############
+##################################################################################################
+
+#14. EVM
+if cfg["Parameters"]["run_evm"]:
+    EVM_DIR = cfg["Outputs"]["EVM_dir"]
+    PASA_DIR = cfg["Outputs"]["pasa_dir"]
+
+    #14.1 Path Output EVM
+    dirEvmOutput = EVM_DIR
+    dirEvmOutputOut = dirEvmOutput + "/out/"
+    if not os.path.exists(dirEvmOutputOut):
+        os.makedirs(dirEvmOutputOut)
+
+    #14.2 Get EVM parameters
+    spaln_weights =  cfg["spaln"]["spaln_weights"]
+    total_weights = len(spaln_weights)
+    evm_script = cfg["evm"]["evm_script"]
+
+    sortcommand = ""
+    for i in range(1,total_weights+1):
+        sortcommand= sortcommand +  "sort weights_" + str(i) + ".txt | uniq > weights_" + str(i) + ".txt.tmp; mv weights_" + str(i) + ".txt.tmp weights_" + str(i) + ".txt;"
+
+    #14.3 CONCATENATION OF GENE PREDICTIONS OUTPUTS
+    jobEvmPrediction = job("merge_evm",\
+        log = dirEvmOutputOut + "evm_merging.err", \
+        out = dirEvmOutputOut + "evm_merging.out").\
+        bash ("cd " + EVM_DIR + ";" +\
+             "cat *predictions* > predictions.gff3;" +\
+             sortcommand)
+
+    #14.4 Run EVM 
+  
+    listEvmJobs = []
+    for i in range(1,total_weights + 1 ):
+        jobEvm = job("EVM_" + str(i) ,\
+           log = dirEvmOutputOut + "evm_" + str(i) + ".err", \
+           out = dirEvmOutputOut + "evm_" + str(i) + ".out").\
+           run('runEVM', genome=genome_reference, global_log=str(global_log),home_dir=HOME, EVM_DIR=EVM_DIR, weights = "weights_" + str(i), evm_script=evm_script, output= EVM_DIR + "/evm_weights_" + str(i) + ".gff3")
+        listEvmJobs.append(jobEvm)
+
+    jobSelectWeights = job("Select_evm" ,\
+        log = dirEvmOutputOut + "select.err", \
+        out = dirEvmOutputOut + "select.out").\
+        run ('selectEVM', global_log=str(global_log),home_dir=HOME, EVM_DIR=EVM_DIR, PASA_DIR = PASA_DIR, inputs = listEvmJobs, output = EVM_DIR + "/evm.best.gff3" )
+
+##################################################################################################
+################# ANNOTATION UPDATE                                                   ############
+##################################################################################################
+
+if cfg["Parameters"]["run_update"]:
+    #15. ANNOTATION UPDATE  
+    UPDATE_DIR = cfg["Outputs"]["update_dir"]
+    PASA_DIR = cfg["Outputs"]["pasa_dir"]
+    EVM_DIR = cfg["Outputs"]["EVM_dir"]
+    pasa_home = cfg["pasa"]["pasa_home"]   
+
+    #15.1 Path Output annotation update
+    dirUpdateOutput = UPDATE_DIR
+    dirUpdateOutputOut = dirUpdateOutput + "/out/"
+    if not os.path.exists(dirUpdateOutputOut):
+        os.makedirs(dirUpdateOutputOut)
+
+    #15.2 Get Annotation update parameters
+    update_config = cfg["Inputs"]["update_config"]
+    pasadb = cfg["Inputs"]["pasadb"]
+    geneid_parameters = cfg["Inputs"]["geneid_parameters"]
+    project_name = cfg["Inputs"]["project_name"]
+    annotation_version = cfg["Outputs"]["annotation_version"]
+
+ #13.3 Run Annotation update
+    jobAnnotationUpdate = job("Annotation_Update.1" ,\
+        log = dirUpdateOutputOut + "update1.err", \
+        out = dirUpdateOutputOut + "update1.out").\
+        run('runUpdate', pasa_home=pasa_home, update_config=update_config, genome=genome_reference, global_log=str(global_log),home_dir=HOME, UPDATE_DIR = UPDATE_DIR, current_annot = jobSelectWeights, transcripts=jobCleanTranscripts.transcripts_out_name, cleaned_transcripts=jobCleanTranscripts.out, pasadb=pasadb, output = UPDATE_DIR + "/" + pasadb + ".first_PASA_update.gff3")
+
+    jobAnnotationUpdate2 = job("Annotation_Update.2" ,\
+        log = dirUpdateOutputOut + "update2.err", \
+        out = dirUpdateOutputOut + "update2.out").\
+        run('runUpdate', pasa_home=pasa_home, update_config=update_config, genome=genome_reference, global_log=str(global_log),home_dir=HOME, UPDATE_DIR = UPDATE_DIR, current_annot = jobAnnotationUpdate, transcripts=jobCleanTranscripts.transcripts_out_name, cleaned_transcripts=jobCleanTranscripts.out, pasadb=pasadb, output = UPDATE_DIR + "/" + pasadb + ".second_PASA_update.gff3")
+
+    jobAnnotationUpdate = job("Annotation_Update.3" ,\
+        log = dirUpdateOutputOut + "update3.err", \
+        out = dirUpdateOutputOut + "update3.out").\
+        run('processUpdate', genome=genome_reference, global_log=str(global_log),home_dir=HOME, EVM_DIR=EVM_DIR, UPDATE_DIR = UPDATE_DIR, EVM_out = jobSelectWeights, pasa_updates=jobAnnotationUpdate2, pasadb=pasadb, geneid_parameters=geneid_parameters, project=project_name[0], version = project_name[1], output = UPDATE_DIR + "/" + project_name[0] + project_name[1] + ".gff3", protein_output = UPDATE_DIR + "/" + project_name[0] + project_name[1] + ".pep.fa")
+
+
+
+##################################################################################################
+################# ncRNA Annotation                                                    ############
+##################################################################################################
+
+if cfg["Parameters"]["run_ncRNA_annotation"]:
+    #14. ncRNA Annotation 
+    #14.1 Get ncRNA annotation parameters 
+    ncRNA_DIR = cfg["Outputs"]["ncRNA_annotation_dir"]
+    ncRNA_version = cfg["Inputs"]["ncRNA_version"]
+    project_name = cfg["Inputs"]["project_name"]
+
+    #14.2 cmsearch step
+
+    #14.2.1 Get cmsearch parameters
+    out_cmsearch = cfg["Outputs"]["out_cmsearch"]
+    dirCmsearchOutput = os.path.dirname(out_cmsearch)
+    dirCmsearchOutputOut = dirCmsearchOutput + "/out/"
+    if not os.path.exists(dirCmsearchOutputOut):
+        os.makedirs(dirCmsearchOutputOut)    
+
+    cmsearch_CPUs = cfg["ncRNA_annotation"]["cmsearch_CPUs"]
+    Rfam = cfg["ncRNA_annotation"]["Rfam"]
+
+    #14.2.2 Run cmsearch 
+    jobcmsearch = job("cmsearch" , threads=cmsearch_CPUs,\
+        log = dirCmsearchOutputOut + "cmsearch.err", \
+        out = dirCmsearchOutputOut + "cmsearch.out").\
+        run ('runCmsearch', genome=genome_reference, global_log=str(global_log),home_dir=HOME, ncRNA_DIR=dirCmsearchOutput, cmsearch_CPUs=cmsearch_CPUs, output=out_cmsearch, RFAM=Rfam )
+
+    #14.3 tRNAscan-SE
+    #14.3.1 Get tRNAscan-SE parameters
+    out_tRNAscan = cfg["Outputs"]["out_tRNAscan"]
+    dirtRNAscanOutput = os.path.dirname(out_tRNAscan)
+    dirtRNAscanOutputOut = dirtRNAscanOutput + "/out/"
+    if not os.path.exists(dirtRNAscanOutputOut):
+        os.makedirs(dirtRNAscanOutputOut)  
+
+    genome_chunks = cfg["Chunks"]["genome_chunks"]
+
+
+    #14.3.2 Define 1 job for each genome chunk
+    listtRNAscanJobs = []
+
+    for i in range(1,genome_chunks+1):
+
+        jobtRNAscan = job("tRNAscan_" + str(i) ,\
+            log = dirtRNAscanOutputOut + "tRNAscan_" + str(i) + ".err", \
+            out = dirtRNAscanOutputOut + "tRNAscan_" + str(i) + ".out").\
+            run('runTRNAscan', genome_chunk=dirGenomeChunks + "/" + clean_reference_genome_name + "." + str(i) + ".fa", global_log = global_log, home_dir=HOME, out=out_tRNAscan + "." + str(i) + ".out", log=out_tRNAscan + "." + str(i) + ".log", stats=out_tRNAscan + "." + str(i) + ".stats" )
+        listtRNAscanJobs.append(jobtRNAscan)
+
+    #14.4 lncRNA annotation
+    #14.4.1 Get lncRNA annotation parameters
+    dirlncRNAOutput = ncRNA_DIR
+    dirlncRNAOutputOut = dirlncRNAOutput + "/out/"
+    if not os.path.exists(dirlncRNAOutputOut):
+        os.makedirs(dirlncRNAOutputOut) 
+
+    RepeatMasker = cfg["Inputs"]["RM_gff"]
+    proteins = cfg["Inputs"]["proteins"]   
+    protein_chunks = cfg["Chunks"]["protein_chunks"]
+
+
+    #14.4.2 Run lncRNA annotation step    
+    joblncRNAannotation = job("lncRNA" ,\
+        log = dirlncRNAOutputOut + "lncRNA.err", \
+        out = dirlncRNAOutputOut + "lncRNA.out").\
+        run ('runlncRNAannotation', global_log=str(global_log),home_dir=HOME, ncRNA_DIR=dirlncRNAOutput, coding= jobAnnotationUpdate.output, PASA_out=jobPasa.output , name=project_name[0] , version=ncRNA_version, lncRNA_output=dirlncRNAOutput+ "/lncRNA_annotation.nonclassified.gff3", genome=genome_reference, RM=RepeatMasker, proteins = proteins, annotated_proteins = jobAnnotationUpdate.protein_output, chunks=protein_chunks, blast_proteins_dir= "blast_proteins", blast_annotated_dir="annotated_proteins" )
+
+    listBlastJobs = []
+    for i in range(1,protein_chunks + 1 ):
+        jobBlastlncRNAs = job("Blast_lnc" + str(i) ,\
+           log = dirlncRNAOutputOut + "blastprot_" + str(i) + ".err", \
+           out = dirlncRNAOutputOut + "blastprot_" + str(i) + ".out").\
+           run('runBlast', global_log=str(global_log),home_dir=HOME, BLAST_DIR=dirlncRNAOutput + "/blast_proteins", input_file= dirlncRNAOutput + "/blast_proteins/proteins." + str(i) + ".fa" , db=dirlncRNAOutput + "/lncRNA_cds_db", out= dirlncRNAOutput + "/blast_proteins/proteins." + str(i) + ".out" )
+        listBlastJobs.append(jobBlastlncRNAs)
+
+    for i in range(1,protein_chunks + 1 ):
+        jobBlastlncRNAs = job("Blast_lnc" + str(i) ,\
+           log = dirlncRNAOutputOut + "blastannot_" + str(i) + ".err", \
+           out = dirlncRNAOutputOut + "blastannot_" + str(i) + ".out").\
+           run('runBlast', global_log=str(global_log),home_dir=HOME, BLAST_DIR=dirlncRNAOutput + "/annotated_proteins", input_file=dirlncRNAOutput + "/annotated_proteins/annotated_proteins." + str(i) + ".fa" , db=dirlncRNAOutput + "/lncRNA_cds_db", out= dirlncRNAOutput + "/annotated_proteins/annotated_proteins." + str(i) + ".out" )
+        listBlastJobs.append(jobBlastlncRNAs)
+
+    jobncRNAannotation = job("ncRNA" ,\
+        log = dirlncRNAOutputOut + "ncRNA.err", \
+        out = dirlncRNAOutputOut + "ncRNA.out").\
+        run ('runGetncRNAannotation', global_log=str(global_log),home_dir=HOME, ncRNA_DIR = dirlncRNAOutput, blast_proteins_dir=dirlncRNAOutput + "/blast_proteins", blast_annotated_dir = dirlncRNAOutput + "/annotated_proteins"  )
+
+
+##################################################################################################
+################# JOB DEPENDENCIES                                                    ############
+##################################################################################################
+
+if cfg["Parameters"]["run_augustus"]:
+    #15.1 Augustus Dependencies
+    for job in listAugustusJobs:
+        jobSplitMasked >> job >> jobMergingAugustus
+
+    if job_junctions == True:
+        if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]:
+            jobMergingAugustus >> jobJunctions
+
+    if cfg["Parameters"]["run_evm"]:
+        jobMergingAugustus >>  jobEvmPrediction
+
+if cfg["Parameters"]["run_geneid"]:
+    #15.2 GeneID Dependencies
+    for job in listGeneidJobs:
+        jobSplitMasked >> job >> jobMergingGeneId 
+
+    if job_junctions == True:
+        if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]:    
+            jobMergingGeneId >> jobJunctions
+
+    if cfg["Parameters"]["run_evm"]:
+        jobMergingGeneId >> jobEvmPrediction
+
+if cfg["Parameters"]["run_genemark"] and cfg["Parameters"]["run_evm"]:
+    jobGenemark >> jobEvmPrediction
+
+if cfg["Parameters"]["run_glimmer"] and cfg["Parameters"]["run_evm"]:
+    jobGlimmer >> jobEvmPrediction
+
+if cfg["Parameters"]["run_spaln"] and job_junctions == True:
+    #15.3 Spaln Dependencies
+    if (cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]) and cfg["Parameters"]["run_evm"]:
+        jobSpaln >> jobJunctions >> jobSelectWeights
+
+if cfg["Parameters"]["run_geneid_introns"]:
+  #  15.4 GeneID Introns Dependencies
+    for job in listGeneidIntronsJobs:
+        jobSplitMasked >> job 
+        jobJunctions >> job 
+        job >> jobMergingGeneIdIntrons 
+
+    if cfg["Parameters"]["run_evm"]:
+        jobMergingGeneIdIntrons >> jobEvmPrediction
+
+if cfg["Parameters"]["run_augustus_introns"]:
+  #  15.2 Augustus Introns Dependencies
+    for job in listAugustusIntronsJobs:
+        jobSplitMasked >> job 
+        jobJunctions >> job 
+        job >> jobMergingAugustusIntrons
+
+    if cfg["Parameters"]["run_evm"]:
+        jobMergingAugustusIntrons >> jobEvmPrediction
+
+if cfg["Parameters"]["run_genemark_ET"]:
+    #15.2 Genemark-ET Dependencies
+    jobJunctions >> jobGenemarkET 
+
+    if cfg["Parameters"]["run_evm"]:
+        jobGenemarkET >> jobEvmPrediction
+
+if cfg["Parameters"]["run_pasa"]:
+    jobCleanTranscripts >> jobPasa 
+    if cfg["Parameters"]["run_transdecoder"]:
+        jobPasa >> jobTransdecoder >> jobEvmPrediction
+
+if cfg["Parameters"]["run_evm"]:
+    for job in listEvmJobs:
+        jobEvmPrediction >> job >> jobSelectWeights
+        jobSpaln >> job >> jobSelectWeights
+        jobPasa >> job >> jobSelectWeights
+        jobTransdecoder >> job >> jobSelectWeights
+
+    if cfg["Parameters"]["run_update"]:
+        jobSelectWeights >> jobAnnotationUpdate
+
+if cfg["Parameters"]["run_ncRNA_annotation"]:
+    for job in listtRNAscanJobs: 
+        jobSplitGenome >> job 
+
+    for job in listBlastJobs:
+        joblncRNAannotation >> job >> jobncRNAannotation
+
+
+
+

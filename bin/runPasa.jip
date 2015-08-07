@@ -1,0 +1,51 @@
+#!/usr/bin/env jip
+#Run pasa
+#
+#Usage:
+# runPasa.jip -r <genome> -g <global_log> -e <home_dir> -p <PASA_DIR> -d <dir> -m <pasa_home> -f <config_file> -t <transcripts> -l <cleaned_transcripts> --CPU <CPU> -q <EVM_DIR> --pasadb <pasadb> -c <create_weights_file> [--cufflinks <cufflinks>] [--step <step>] -o <output>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -p, --PASA_DIR <PASA_DIR>                   Path to the PASA directory
+# -d, --dir <dir>                             Directory where the pipeline is run
+# -r, --genome <genome>                       File with the genome
+# -m, --pasa_home <pasa_home>                 Directory to the desired version of pasa
+# -f, --config_file <config_file>             AlingmentAssembly configuration file for running pasa 
+# -t, --transcripts <transcripts>             File with the transcripts to map in fasta format
+# -l, --cleaned_transcripts <cleaned_transcripts>     File with the transcripts cleaned by seqclean
+# -q, --EVM_DIR <EVM_DIR>                     Path to the EVM directory
+# [--cufflinks ]
+#
+#Outputs:
+# -o, --output <output>
+#Options:
+# --CPU <CPU>                                 Number of CPUs to use
+# --pasadb <pasadb>                           Name of the pasa database
+# -c, --create_weights_file                   Command to run when creating the weights file line for PASA mappings
+# [--step <step>]
+
+#%begin validate
+add_output('output_link', r('${EVM_DIR}/transcripts.gff3'))
+#%end 
+
+cd ${PASA_DIR}
+ln -s ${genome} 
+${cufflinks|arg("ln -s ")}
+
+
+module unload intel
+${pasa_home}/scripts/Launch_PASA_pipeline.pl -c ${config_file} -R -g ${genome|name} -t ${cleaned_transcripts} -T -u ${transcripts} --ALIGNERS gmap --CPU ${CPU} ${cufflinks|name|arg("--cufflinks " )} ${step}
+cd  ${dir}
+cd ${EVM_DIR}
+ln -s ${output} transcripts.gff3
+${create_weights_file}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in running pasa step. Removing outputs, check the state of the job and restart it with the pasa_step parameter or purge the database before re-starting it again\n" >> ${global_log}
+    exit 2
+else
+    echo "Pasa step: done!" >> ${global_log}
+fi
+

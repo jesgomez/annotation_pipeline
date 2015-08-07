@@ -1,0 +1,25 @@
+#!/usr/bin/env jip
+#Run geneid
+#
+#Usage:
+# runGeneid.jip -r <genome_chunk> -g <global_log> -e <home_dir> -o <out> -i <geneid_parameters> -t <geneid_options>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -i, --geneid_parameters <geneid_parameters> File with the geneid parameters for the species
+#
+#Outputs:
+# -o, --out <out>                             File to keep the results of this step
+#
+#Options:
+# -r, --genome_chunk <genome_chunk>           Chunk of the masked genome
+# -t, --geneid_options <geneid_options>       Options to run geneid with
+
+geneid -P ${geneid_parameters} ${geneid_options} ${genome_chunk} > ${out}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in geneid step. Removing outputs\n" >> ${global_log}
+    exit 2
+fi

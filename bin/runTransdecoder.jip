@@ -1,0 +1,40 @@
+#!/usr/bin/env jip
+#Run transdecoder
+#
+#Usage:
+# runTransdecoder.jip -r <genome> -g <global_log> -e <home_dir> -p <PASA_DIR> -d <dir> -m <pasa_home> -t <transcripts_gff3> -q <EVM_DIR> --pasadb <pasadb> -c <create_weights_file> -o <output>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -p, --PASA_DIR <PASA_DIR>                   Path to the PASA directory
+# -d, --dir <dir>                             Directory where the pipeline is run
+# -r, --genome <genome>                       File with the genome
+# -m, --pasa_home <pasa_home>                 Directory to the desired version of pasa
+# -t, --transcripts_gff3 <transcripts_gff3>   Transcripts in gff3 format, usually coming from Pasa step
+# -q, --EVM_DIR <EVM_DIR>                     Path to the EVM directory
+#
+#Outputs:
+# -o, --output <output>
+#Options:
+# --pasadb <pasadb>                           Name of the pasa database
+# -c, --create_weights_file                   Command to run when creating the weights file line for transdecoder models
+
+#%begin validate
+add_output('output_link', r('${EVM_DIR}/transdecoder_predictions.gff3'))
+#%end 
+
+cd ${PASA_DIR}
+module unload intel
+${pasa_home}/scripts/pasa_asmbls_to_training_set.dbi --pasa_transcripts_fasta ${pasadb}.assemblies.fasta --pasa_transcripts_gff3 ${transcripts_gff3} -M ${pasadb}:cn501-data -p pasa_admin:WLTTvcP2U -g ${genome}
+cd ${EVM_DIR}
+ln -s ${output} transdecoder_predictions.gff3
+${create_weights_file}
+              
+if [ "$?" != "0" ];
+then 
+    echo "Error in running transdecoder step. Removing outputs.\n" >> ${global_log}
+    exit 2
+else
+    echo "Transdecoder step: done!" >> ${global_log}
+fi

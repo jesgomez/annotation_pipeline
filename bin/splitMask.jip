@@ -1,0 +1,38 @@
+#!/usr/bin/env jip
+#Split masked genome into chunks
+#
+#Usage:
+# splitMask.jip -d <dir_chunks> -m <masked_reference> -n <basename_reference> -g <global_log> -e <home_dir> -f <masked_chunks>
+#
+#Inputs:
+# -d, --dir_chunks <dir_chunks>               Directory to keep the chunks
+# -m, --masked_reference <masked_reference>   Masked reference file
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+#
+#Outputs:
+#
+#Options:
+# -n, --basename_reference <name_reference>       Name of the reference
+# -f, --masked_chunks <masked_chunks>             Number of chunks to make
+#
+
+#%begin validate
+chunks = int(str(masked_chunks)) + 1
+for k in range (1, chunks):
+    add_output('output_' + str(k), r('${dir_chunks}/${basename_reference}.${k}.fa'))
+#%end
+
+
+cd ${dir_chunks}  
+ln -s  ${masked_reference} ${basename_reference}.fa 
+${home_dir}/scripts/fasta2chunks.pl -f ${basename_reference}.fa -n ${masked_chunks}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in fasta2chunks.pl removing outputs" >> ${global_log}
+    exit 2
+else
+    echo "Step split masked genome into ${masked_chunks} chunks: done!" >> ${global_log}
+fi
+

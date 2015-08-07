@@ -1,0 +1,41 @@
+#!/usr/bin/env jip
+#Run glimmer
+#
+#Usage:
+# runGlimmer.jip -m <genome_masked> -g <global_log> -e <home_dir> -d <dir> -o <out> -p <EVM_out> -q <EVM_DIR> -c <create_weights_file> -t <trained_glimmer_directory>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -m, --genome_masked <genome_masked>         File with the masked genome
+# -d, --dir <dir>                             Directory where the pipeline is run
+# -q, --EVM_DIR <EVM_DIR>                     Path to the EVM directory   
+# -t, --trained_glimmer_directory <trained_glimmer_directory>               
+#
+#Outputs:
+# -o, --out <out>                             File to keep the results of this step, in gtf format
+# -p, --EVM_out <EVM_out>                     File to keep the results of this step converted for EVM
+#
+#Options:
+# -c, --create_weights_file                  Command to run when creating the weights file line for Glimmer predictions
+
+
+#%begin validate
+add_output('output_link', r('${EVM_DIR}/glimmer_predictions.gff3'))
+#%end
+
+cd $TMPDIR
+${home_dir}/scripts/run_glimmer.pl ${genome_masked} . ${trained_glimmer_directory}
+cat scaffold_*.gff3 > ${out}
+$EVM_PATH/EvmUtils/misc/glimmerHMM_to_GFF3.pl ${out} > ${EVM_out} 
+cd ${EVM_DIR}
+ln -s ${EVM_out} glimmer_predictions.gff3
+${create_weights_file}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in glimmer step. Removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Glimmer step: done!" >> ${global_log}
+fi

@@ -1,0 +1,46 @@
+#!/usr/bin/env jip
+#Run genemark-ET
+#
+#Usage:
+# runGenemark-ET.jip -m <genome_masked> -g <global_log> -e <home_dir> -d <dir> -o <out> -p <EVM_out> -q <EVM_DIR> --max_gap <max_gap> --min_contig <min_contig> --cores <cores> --max_contig <max_contig> -t <additional_genemark_options> -c <create_weights_file> -j <incoding_junctions> --et_score <et_score>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -m, --genome_masked <genome_masked>         File with the masked genome
+# -d, --dir <dir>                             Directory where the pipeline is run
+# -q, --EVM_DIR <EVM_DIR>                     Path to the EVM directory            
+# -j, --incoding_junctions <incoding_junctions>     File with the junctions that will be used as evidence      
+#
+#Outputs:
+# -o, --out <out>                             File to keep the results of this step, in gtf format
+# -p, --EVM_out <EVM_out>                     File to keep the results of this step converted for EVM
+#
+#Options:
+# --max_gap                                   
+# --min_contig
+# --max_contig
+# --cores
+# --et_score
+# -t, --additional_genemark_options
+# -c, --create_weights_file                  Command to run when creating the weights file line for Genemark predictions
+
+cd $TMPDIR
+module unload intel
+cp ${genome_masked} genome_masked.fa 
+cp ${incoding_junctions} junctions_incoding.gff
+$GENEMARK_PATH/gmes_petap.pl --sequence genome_masked.fa --ET junctions_incoding.gff --et_score ${et_score} --max_gap ${max_gap} --min_contig ${min_contig} --cores ${cores} --max_contig ${max_contig} ${additional_genemark_options}
+cp genemark.gtf ${out}
+cd ${dir}
+cat ${out} |  ${home_dir}/scripts/gtf_to_gff2or3.pl -noaddstop -v 2.5 -ov 3 -mrna | grep -v codon | grep -v '#' | sed 's/GeneMark.hmm/GeneMark-ET/g' > ${EVM_out}
+cd ${EVM_DIR}
+ln -s ${EVM_out} genemark-ET_predictions.gff3
+${create_weights_file}
+ 
+if [ "$?" != "0" ];
+then 
+    echo "Error in genemark-ET step. Removing outputs\n" >> ${global_log}
+    exit 2
+else
+    echo "Genemark-ET step: done!" >> ${global_log}
+fi

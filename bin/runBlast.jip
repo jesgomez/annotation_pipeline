@@ -1,0 +1,21 @@
+#!/usr/bin/env jip
+#Run blast annotation
+#
+#Usage:
+# runBlast.jip -g <global_log> -e <home_dir> -d <BLAST_DIR> -f <input_file> --db <db> -o <out>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+#
+#Outputs:
+# -o, --out <out>                             input_file to keep the output of blast
+#
+#Options:
+# --db, <db>                                  Blast db
+# -f, --input_file <input_file>               Protein fasta input_file          
+# -d, --BLAST_DIR <BLAST_DIR>                 Directory to run this blast       
+#
+
+#cd ${BLAST_DIR}
+tblastn -outfmt "6 qseqid sseqid pident length mismatch gapopen qlen qstart qend slen sstart send evalue bitscore" -query ${input_file} -db ${db}  > ${out}

@@ -1,0 +1,30 @@
+#!/usr/bin/env jip
+#Run EVM
+#
+#Usage:
+# runEVM.jip -r <genome> -g <global_log> -e <home_dir> -q <EVM_DIR> -i <evm_script> -w <weights> -o <output>
+#
+#Inputs:
+# -g, --global_log <global_log>               Global log of job states  
+# -e, --home_dir <home_dir>                   Home directory to locate the scripts
+# -r, --genome <genome>                       File with the genome
+# -q, --EVM_DIR <EVM_DIR>                     Path to the EVM directory
+# -i, --evm_script <evm_script>
+#
+#Outputs:
+# -o, --output <output>
+#Options:
+# -w, --weights <weights>
+
+cd ${EVM_DIR}
+ln -s ${genome} genome.fa
+${evm_script} ${weights}
+
+if [ "$?" != "0" ];
+then 
+    echo "Error in running EVM step with weights file ${weights}.txt. Removing outputs." >> ${global_log}
+    exit 2
+else
+    echo "EVM step: done!" >> ${global_log}
+fi
+
