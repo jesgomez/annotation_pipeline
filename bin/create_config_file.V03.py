@@ -83,7 +83,7 @@ class CreateConfigurationFile(object):
 
         #CHUNKS PARAMETERS
         self.masked_chunks = "50"                          #Number of chunks of the masked genome for parallelizing some gene predictors run.
-        self.genome_chunks = "20"                          #Number of chunks of the genome for parallelizing cmsearch.
+        self.genome_chunks = "20"                          #Number of chunks of the genome for parallelizing tRNAscanSE.
         self.protein_chunks = "100"                        #Number of chunks to split the protein files for running blast and classify the lncRNAs. 
 
         #AUGUSTUS PARAMETERS

@@ -1,937 +1,603 @@
+﻿
 Annotation pipeline documentation
-1. Introduction
-2. Download and install JIP
-3. Detailed explanation of each step
-4. Creating the configuration file
-5. Changing the spec file
-6. Running the script annotation_pipeline.V01.jip
-7. Examples
+1)Introduction
 
-Introduction
-
-The annotation pipeline is a tool that allows to structurally annotate the protein coding parts of a genome through a combination of ab initio gene predictions and homology searches. It uses the JIP environment.
-
-It has been designed at the CNAG (Centre Nacional d'Anàlisi Genòmica).
+The annotation pipeline is a tool that allows to structurally annotate the protein coding and non-coding parts of a genome through a combination of ab initio gene predictions and homology searches. It has been designed in the CNAG (Centre Nacional d'Anàlisi Genòmica) and it uses the JIP environment. 
 
 2) Download and install the following programs required for the pipeline:
 
-    Download and install JIP http://pyjip.readthedocs.org/en/latest/
+Download and install JIP:
+http://pyjip.readthedocs.org/en/latest/
 
-    Geneid: Program used for ab initio prediction of eukariotic genomic sequences.
+       Geneid: Program used for ab initio prediction of eukariotic genomic sequences.
+Download and get installation instructions from: http://genome.crg.es/software/geneid/
 
-        Download and get installation instructions from: http://genome.crg.es/software/geneid/
+       Genemark-ET: Program used for ab initio prediction of eukariotic genomic sequences.
+Download and get installation instructions from: http://exon.gatech.edu/GeneMark/
+Add the GENEMARK_PATH to your environment before running the genemark or genemark-ET steps of the pipeline. (Example: export GENEMARK_PATH=/project/devel/aateam/src/GeneMark-ET/gmes_petap/ )
 
-    Genemark-ET: Program used for ab initio prediction of eukariotic genomic sequences.
+       Augustus: Program used for ab initio prediction of eukariotic genomic sequences.
+Download and get installation instructions from: http://bioinf.uni-greifswald.de/augustus/downloads/index.php
 
-        Download and get installation instructions from: http://exon.gatech.edu/GeneMark/
+       GlimmerHMM: Program used for ab initio prediction of eukariotic genomic sequences.
+Download and get installation instructions from: http://www.cs.jhu.edu/~genomics/GlimmerHMM/
 
-        Add the GENEMARK_PATH to your environment before running the genemark or genemark-ET steps of the pipeline. (Example: export GENEMARK_PATH=/project/devel/aateam/src/GeneMark-ET/gmes_petap/ )
+       PASA: Program used to map RNA-seq data processed by cufflinks and ESTs from the same species or some close species to our genome of interest. 
+Download and get installation instructions from: http://pasa.sourceforge.net/
 
-    Augustus: Program used for ab initio prediction of eukariotic genomic sequences.
+       SPALN: Program used to map protein sequences from the same species or some close species to our genome of interest.
+Download and get installation instructions from: http://www.genome.ist.i.kyoto-u.ac.jp/~aln_user/spaln/
 
-        Download and get installation instructions from: http://bioinf.uni-greifswald.de/augustus/downloads/index.php
+       EvidenceModeler(EVM): Program used to compute weighted consensus gene structure annotations based on the above outputs. 
+Download and get installation instructions from: http://evidencemodeler.sourceforge.net/
+Add the EVM_PATH to your environment before running the pipeline . (Example:export export EVM_PATH=/project/devel/aateam/src/EVM_r2012-06-25/ )
 
-    GlimmerHMM: Program used for ab initio prediction of eukariotic genomic sequences.
+       BEDTOOLS: Flexible tools for genome arithmetic and DNA sequence analysis. Used in some steps of the pipeline to compare the gene annotations made by different programs. 
+Download and get installation instructions from: http://bedtools.readthedocs.org/en/latest/
 
-        Download and get installation instructions from: http://www.cs.jhu.edu/~genomics/GlimmerHMM/
+       GMAP: Program for mapping and aligning cDNA sequences to a genome. Needed for running PASA.
+Download and get installation instructions from: http://research-pub.gene.com/gmap/
 
-    PASA: Program used to map RNA-seq data processed by cufflinks and ESTs from the same species or some close species to our genome of interest.
+       Infernal: Program used to search DNA sequence databases for RNA structure.
+Download and get installation instructions from: http://infernal.janelia.org
 
-        Download and get installation instructions from: http://pasa.sourceforge.net/
-
-    SPALN: Program used to map protein sequences from the same species or some close species to our genome of interest.
-
-        Download and get installation instructions from: http://www.genome.ist.i.kyoto-u.ac.jp/~aln_user/spaln/
-
-    EvidenceModeler(EVM): Program used to compute weighted consensus gene structure annotations based on the above outputs.
-
-        Download and get installation instructions from: http://evidencemodeler.sourceforge.net/
-
-        Add the EVM_PATH to your environment before running the pipeline . (Example:export export EVM_PATH=/project/devel/aateam/src/EVM_r2012-06-25/ )
-
-    BEDTOOLS: Flexible tools for genome arithmetic and DNA sequence analysis. Used in some steps of the pipeline to compare the gene annotations made by different programs.
-
-        Download and get installation instructions from:
-
-        http://bedtools.readthedocs.org/en/latest/
-
-    GMAP: Program for mapping and aligning cDNA sequences to a genome. Needed for running PASA.
-
-        Download and get installation instructions from:
-
-        http://research-pub.gene.com/gmap/
-
-    3) Detailed explanation of each step
-
-    The CNAG annotation pipeline uses a combination of the Program to Assemble Spliced Alignments (PASA) and Evidence Modeler (EVM) to obtain consensus coding sequence (CDS) models using three main sources of evidence: aligned transcripts, aligned proteins, and gene predictions.
-
-    3.1 Ab initio gene predictions:
-
-    Four different ab initio gene predictors are included in the pipeline. To run them it is needed to give as options the species-specific parameter file that each tool needs and the path to the genome masked for species specific repeats. The four gene predictors contained in the pipeline are:
-
-        Geneid
-
-        Augustus
-
-        GlimmmerHMM
-
-        Genemark-ES
-
-    3.2 Homology searches:
-
-        Program to Assemble Spliced Alignments (PASA) is used to map RNA-seq evidence models produced by cufflinks and transcript evidence in fasta format to the assembled genome.
-
-        After running PASA it is possible to run the transdecoder step which finds coding regions in the transcripts.
-
-        Spaln is used to map protein evidence in fasta format to the genome.
-
-    3.3 Gene predictors with evidence:
-
-    When mapping the RNA-seq data to the genome assembly (step not included in the pipeline yet), it is possible to get intron junctions to help the ab initio gene predictors.
-
-    Geneid, Augustus and Genemark-ET can be run with these junctions as hints, which can help to produce better predictions. Only those junctions predicted in areas where we have coding evidence are used. There are two ways of giving these junctions to the pipeline: already processed for coding regions or directly all the junctions outputted by Gem, in the latter case the pipeline runs a step of junction processing, in which it selects those junctions present in spaln, geneid and augustus ab initio outputs.
-
-    3.4 EVM:
-
-    Once all the previous steps have finished the pipeline combines everything and produces consensus coding sequence models with EvidenceModeler (EVM). By default, the pipeline runs EVM with three different weight files and afterwards it selects the output with better specificity and sensitivity to the RNA-seq mappings. If desired you can change the weights of each evidence step and/or generate more or less weight files by modifying the json configuration file.
-
-    3.5 Annotation update:
-
-    The consensus CDS models are then updated with UTRs and alternative exons through two rounds of PASA’s annotation updates. A final round of quality control is performed, fixing reading frames, intron phases and removing some trancscripts with NMDs. The resulting transcripts are then clustered into genes using shared splice sites or significant sequence overlap as criteria for designation as the same gene. Systematic identifiers with the prefix and version specified with the “project-name” option of the json parameter file are assigned to the genes, transcripts and protein products derived from them.
-
-    4) Creating the configuration file
-
-    The python script create_config_file.V01.py needs to be run previous to the annotation pipeline to generate the json configuration file containing all the parameters that will be used when running the pipeline. The parameters of the json configuration file are divided into different categories.
-
-    The first compulsory argument is the “-jsonFile” option, that gives the name of the configuration file to be written.
-
-    Next, you can specify which jobs you do not want to run, if any, by saying “- - no-stepname”. For example, if you specify “- -no-geneid” it will run the whole pipeline except the geneid step. In this General category it is also needed to give the pipeline Home directory, which is where it will look for all the scripts.
-
-    General Parameters:
-
-    --no-geneid If specified, do not run geneid step.
-
-    --no-augustus If specified, do not run augustus step.
-
-    --no-genemark If specified, do not run genemark step.
-
-    --no-glimmer If specified, do not run glimmer step.
-
-    --no-geneid-introns If specified, do not run geneid with introns step.
-
-    --no-augustus-introns
-
-    If specified, do not run augustus with introns step.
-
-    --no-genemark-ET If specified, do not run genemark-ET step.
-
-    --no-spaln If specified, do not run spaln step.
-
-    --no-pasa If specified, do not run pasa step.
-
-    --no-transdecoder If specified, do not run transdecoder step.
-
-    --no-evm If specified, do not run EVM step.
-
-    --no-update If specified, do not run the annotation update step.
-
-    --pipeline-HOME pipeline_HOME
-
-    Path to the pipeline home directory. Default
-
-    /project/devel/aateam/src/Annotation_pipeline.V01/
-
-    Once you have decided which steps you want to run, there are some compulsory parameters that need to be given for those steps. If you try to run the script at this point it will show an error message with all the the compulsory options that you need for those steps. For example, if you run any ab initio gene predictor it will ask you to give the masked genome and for the rest of steps it will ask for the genome without masking.
-
-    Once you have given all the input options, you can change some of the default parameters. In the help of the create_config_file.V01.py script you have a detailed information of all the parameters classified by step and its default values. Type “ create_configuration_file.V01.py -h”.
-
-    Important to make sure that the input and output parameters point to the desire location, check this in the json configuration file before running the pipeline and change them by running again the “create_config_file.V01.py” if needed.
-
-    Defining weights for the EVM step: EVM combines all the gene predictions and homology searches and produces consensus coding sequence models. By default, the pipeline runs EVM with three different weight files and afterwards it selects the output with better specificity and sensitivity to the RNA-seq mappings. It is possible to change the default values of the weights by specifying the option “- -stepname-weights”. For example, if you add the option “- -augustus-weights 2 1 2”, the weights for augustus will be 2 in weights_1.txt, 1 in weights_2.txt and 2 in weights_3.txt.
-
-    5) Changing the spec file
-
-    The jip environment allows the definition of the characteristics of each job that the pipeline will launch to the cluster. It is possible to change the default parameters by changing the annotation_pipeline.V01.spec file. In there, you can specify values such as the queue where you want to launch each job, the number of CPUs needed, the time, the priority, etc. Dfeault values for each job have been tested and seem to be the appropriate ones to ensure the correct finalization of that job.
-
-    6) Running the script annotation_pipeline.V01.jip
-
-    If the configuration and the spec file have been correctly defined, everything should be ready to run the annotation_pipeline.V01.jip script. The only option it takes is “-c” which should contain the name of the configuration file.
-
-    Note that some of the jobs will have as dependency some step of the pipeline, so they will wait until their dependencies finish to start running.
-
-    7)Examples
-
-    Example for running the whole pipeline:
-
-    ./create_config_file.V01.py -jsonFile test.json --genome genome.scaffolds.fa --genome-masked genome.scaffolds.masked.fa –geneid-parameters training_geneid/H.sapiens.geneid.optimized.U12.param --proteins proteins.fasta –transcripts transcripts.fasta --pasa-config alignAssembly.config --pasadb pasa_db –cufflinks cufflinks.gtf –glimmer-directory training_glimmer/TrainGlimmM2014-11-13D18:10:20/ --species human --junctions junctions_all.gff –project-name HSAP 1A –extrinsic-file-augustus-introns extrinsic.M.RM.E.W.cfg –update-config annotCompare.config –junctions junctions.gff
-
-    ./annotation_pipeline.V01.jip -c test.json – submit
-
-    7.1 Running Augustus:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome-masked genome_masked
-
-    Path to the fasta genome masked.
-
-    --species species Species name to run augustus with its trained parameters.
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --augustus-prediction AUGUSTUS_PREDICTION
-
-    Output file for the augustus predictions. Default step 03_annotation_pipeline.V01//gene_predictions/augustus/ augustus_gene_prediction.gff3
-
-    --augustus-preEVM AUGUSTUS_PREEVM
-
-    Output file for the augustus predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3
-
-    Augustus parameters:
-
-    --alternatives-from-sampling ALTERNATIVES_FROM_SAMPLING
-
-    Report alternative transcripts generated through probabilistic, possible values true/false. Default true
-
-    --uniqueGeneId UNIQUEGENEID
-
-    If true, output gene identifyers like this: seqname.gN, possible values true/false. Default true
-
-    --gff3 GFF3
-
-    Output in gff3 format, possible values ON/OFF. Default ON
-
-    --sample SAMPLE
-
-    Default 60
-
-    --noInFrameStop NOINFRAMESTOP
-
-    Do not report transcripts with in-frame stop codons. Otherwise, intron-spanning stop codons could occur, possible values true/false. Default true
-
-    --maxtracks MAXTRACKS
-
-    Maximum number of tracks allowed. Default 2
-
-    --singlestrand SINGLESTRAND
-
-    Predict genes independently on each strand, allow overlapping genes on opposite strands. possible values true/false. Default false
-
-    --strand STRAND
-
-    Possible values both/forward/backward. Default both
-
-    --min-intron-len MIN_INTRON_LEN
-
-    Default 30
-
-    --augustus-weights AUGUSTUS_WEIGHTS [AUGUSTUS_WEIGHTS ...]
-
-    Weights given to augustus predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 2 2 1
-
-    --additional-augustus-options ADDITIONAL_AUGUSTUS_OPTIONS
-
-    Additional augustus options to run it, see augustus help for more information about the possible options.
-
-    7.2 Running Geneid:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome-masked genome_masked
-
-    Path to the fasta genome masked.
-
-    --geneid-parameters geneid_parameters
-
-    Path to the geneid parameters file.
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --geneid-prediction GENEID_PREDICTION
-
-    Output file for the geneid predictions. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid.gff3
-
-    --geneid-preEVM GENEID_PREEVM
-
-    Output file for the geneid predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3
-
-    Geneid parameters:
-
-    --geneid-weights GENEID_WEIGHTS [GENEID_WEIGHTS ...]
-
-    Weights given to geneid predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 2 1 2
-
-    --geneid-options GENEID_OPTIONS
-
-    Desired geneid options to run it, see geneid documentation for more information. Default 3U
-
-    7.3 Running Glimmer:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome-masked genome_masked
-
-    Path to the fasta genome masked.
-
-    --glimmer-directory glimmer_directory
-
-    Path to the directory containing the trained parameters for running glimmer.
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --glimmer-prediction GLIMMER_PREDICTION
-
-    Output file for the glimmer predictions. Default step03_annotation_pipeline.V01//gene_predictions/glimmer.gff3
-
-    --glimmer-preEVM GLIMMER_PREEVM
-
-    Output file for the glimmer predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/glimmer_preEVM.gff3
-
-    Glimmer parameters:
-
-    --glimmer-weights GLIMMER_WEIGHTS [GLIMMER_WEIGHTS ...]
-
-    Weights given to glimmer predictions when running EVM.Specify the weight for each EVM run separated by a space. Example 1 1 1
-
-    7.4 Running Genemark-ES:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome-masked genome_masked
-
-    Path to the fasta genome masked.
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --genemark-prediction GENEMARK_PREDICTION
-
-    Output file for the genemark predictions. Default step03_annotation_pipeline.V01//gene_predictions/genemark.gtf
-
-    --genemark-preEVM GENEMARK_PREEVM
-
-    Output file for the genemark predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/genemark_preEVM.gff3
-
-    Genemark parameters:
-
-    --min-contig MIN_CONTIG
-
-    Will ignore contigs shorter then min_contig in training. Default 50000
-
-    --max-contig MAX_CONTIG
-
-    Will split input genomic sequence into contigs shorter than max_contig. Default 5000000
-
-    --max-gap MAX_GAP
-
-    Will split sequence at gaps longer than max_gap. Letters 'n' and 'N' are interpreted as standing withingaps. Default 5000
-
-    --genemark-cores GENEMARK_CORES
-
-    Number of threads for running genemark. Default 8
-
-    --additional-genemark-options ADDITIONAL_GENEMARK_OPTIONS
-
-    Additional genemark options to run it, see genemark documentation for more information.
-
-    --genemark-weights GENEMARK_WEIGHTS [GENEMARK_WEIGHTS ...]
-
-    Weights given to genemark predictions when runningEVM. Specify the weight for each EVM run separated by a space. Example 1 1 1
-
-    7.5 Running Geneid with introns:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome-masked genome_masked
-
-    Path to the fasta genome masked.
-
-    --geneid-parameters geneid_parameters
-
-    Path to the geneid parameters file.
-
-    --junctions junctions
-
-    Path to the junctions gff file to run gene predictors with introns. Do not needed if incoding junctions existent file is given .
-
-    --incoding-junctions incoding_junctions
-
-    Path to the junctions in coding regions gff file to run gene predictors with introns. (Optional, it can begiven if this file already exists or if you want to keep the processed incoding junctions in that concrete path.)
-
-    --geneid-preEVM GENEID_PREEVM
-
-    Output file for the geneid predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3
-
-    --augustus-preEVM AUGUSTUS_PREEVM
-
-    Output file for the augustus predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3
-
-    --spaln-cds SPALN_CDS
-
-    Output file for the spaln output in a cds gff3 format. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_cds.gff3
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --geneid-introns-prediction GENEID_INTRONS_PREDICTION
-
-    Output file for the geneid with introns predictions.
-
-    Default step03_annotation_pipeline.V01//gene_predictions/geneid_with_introns/geneid_introns.gff3
-
-    --geneid-introns-preEVM GENEID_INTRONS_PREEVM
-
-    Output file for the geneid with introns predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3
-
-    Geneid Introns parameters:
-
-    --geneid-introns-weights GENEID_INTRONS_WEIGHTS [GENEID_INTRONS_WEIGHTS ...]
-
-    Weights given to geneid with intron predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 3 3 3
-
-    --geneid-introns-options GENEID_INTRONS_OPTIONS
-
-    Desired geneid with intron options to run it, see geneid documentation for more information. Default 3U
-
-    7.6 Running Augustus with hints:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome-masked genome_masked
-
-    Path to the fasta genome masked.
-
-    --species species Species name to run augustus with its trained parameters.
-
-    --junctions junctions
-
-    Path to the junctions gff file to run gene predictors with introns. Do not needed if incoding junctions existent file is given .
-
-    --incoding-junctions incoding_junctions
-
-    Path to the junctions in coding regions gff file to run gene predictors with introns. (Optional, it can be given if this file already exists or if you want to keep the processed incoding junctions in that concrete path.)
-
-    --geneid-preEVM GENEID_PREEVM
-
-    Output file for the geneid predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3
-
-    --augustus-preEVM AUGUSTUS_PREEVM
-
-    Output file for the augustus predictions converted forEVM. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3
-
-    --spaln-cds SPALN_CDS
-
-    Output file for the spaln output in a cds gff3 format.
-
-    Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_cds.gff3
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --augustus-introns-prediction AUGUSTUS_INTRONS_PREDICTION
-
-    Output file for the augustus with introns predictions.
-
-    Default step03_annotation_pipeline.V01//gene_predictions/augustus_with_introns/augustus_introns.gff3
-
-    --augustus-introns-preEVM AUGUSTUS_INTRONS_PREEVM
-
-    Output file for the augustus with introns predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3
-
-    Augustus Introns parameters:
-
-    --alternatives-from-sampling ALTERNATIVES_FROM_SAMPLING
-
-    Report alternative transcripts generated through probabilistic, possible values true/false. Default true
-
-    --uniqueGeneId UNIQUEGENEID
-
-    If true, output gene identifyers like this: seqname.gN, possible values true/false. Default true
-
-    --gff3 GFF3
-
-    Output in gff3 format, possible values ON/OFF. Default ON
-
-    --sample SAMPLE
-
-    Default 60
-
-    --noInFrameStop NOINFRAMESTOP
-
-    Do not report transcripts with in-frame stop codons.Otherwise, intron-spanning stop codons could occur, possible values true/false. Default true
-
-    --maxtracks MAXTRACKS
-
-    Maximum number of tracks allowed. Default 2
-
-    --singlestrand SINGLESTRAND
-
-    Predict genes independently on each strand, allow overlapping genes on opposite strands. possible values true/false. Default false
-
-    --strand STRAND
-
-    Possible values both/forward/backward. Default both
-
-    --min-intron-len MIN_INTRON_LEN
-
-    Default 30
-
-    --augustus-introns-weights AUGUSTUS_INTRONS_WEIGHTS [AUGUSTUS_INTRONS_WEIGHTS ...]
-
-    Weights given to augustus with intron predictions when running EVM. Specify the weight for each EVM run by a space. Example 3 3 3
-
-    --additional-augustus-introns-options ADDITIONAL_AUGUSTUS_INTRONS_OPTIONS
-
-    Desired augustus with intron options to run it, see augustus documentation for more information.
-
-    7.7 Running Genemark-ET:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome-masked genome_masked
-
-    Path to the fasta genome masked.
-
-    --junctions junctions
-
-    Path to the junctions gff file to run gene predictors with introns. Do not needed if incoding junctions existent file is given .
-
-    --incoding-junctions incoding_junctions
-
-    Path to the junctions in coding regions gff file to run gene predictors with introns. (Optional, it can be given if this file already exists or if you want to keep the processed incoding junctions in that concrete path.)
-
-    --geneid-preEVM GENEID_PREEVM
-
-    Output file for the geneid predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3
-
-    --augustus-preEVM AUGUSTUS_PREEVM
-
-    Output file for the augustus predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3
-
-    --spaln-cds SPALN_CDS
-
-    Output file for the spaln output in a cds gff3 format. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_cds.gff3
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --genemark-ET-prediction GENEMARK_ET_PREDICTION
-
-    Output file for the genemark-ET predictions. Default step03_annotation_pipeline.V01//gene_predictions/genemark-ET.gtf
-
-    --genemark-ET-preEVM GENEMARK_ET_PREEVM
-
-    Output file for the genemark-ET predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/genemark-ET_preEVM.gff3
-
-    Genemark-ET parameters:
-
-    --min-contig MIN_CONTIG
-
-    Will ignore contigs shorter then min_contig in training. Default 50000
-
-    --max-contig MAX_CONTIG
-
-    Will split input genomic sequence into contigs shorter than max_contig. Default 5000000
-
-    --max-gap MAX_GAP Will split sequence at gaps longer than max_gap. Letters 'n' and 'N' are interpreted as standing within gaps. Default 5000
-
-    --genemark-cores GENEMARK_CORES
-
-    Number of threads for running genemark. Default 8
-
-    --et-score ET_SCORE
-
-    Minimum score of intron in initiation of the ET algorithm. Default 4
-
-    --additional-genemark-ET-options ADDITIONAL_GENEMARK_ET_OPTIONS
-
-    Additional genemark-ET options to run it, see genemark documentation for more information.
-
-    --genemark-ET-weights GENEMARK_ET_WEIGHTS [GENEMARK_ET_WEIGHTS ...]
-
-    Weights given to genemark-ET predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 3 3 3
-
-    7.8 Running Spaln:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome genome
-
-    Path to the fasta genome.
-
-    --proteins proteins
-
-    Path to the fasta with protein evidence.
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --spaln-gene SPALN_GENE
-
-    Output file for the spaln output in a gene gff3 format. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_gene.gff3
-
-    --spaln-cds SPALN_CDS
-
-    Output file for the spaln output in a cds gff3 format. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_cds.gff3
-
-    Spaln parameters:
-
-    --ya YA
-
-    Stringency of splice site. 0->3: strong->weak. Default 1
-
-    --M M
-
-    Number of outputs per query (max=4 for genome vs cDNA|protein). Default 4
-
-    --O O
-
-    0:Gff3_gene; 1:alignment; 2:Gff3_match; 3:Bed; 4:exon-inf; 5:intron-inf; 6:cDNA; 7:translated; 8: block-only; 12: binary. Default 0
-
-    --Q Q
-
-    0:DP; 1-3: HSP-Search; 4-7; Block-Search. Default 7
-
-    --t T
-
-    Number of threads. Default 8
-
-    --spaln-weights SPALN_WEIGHTS [SPALN_WEIGHTS ...]
-
-    Weights given to spaln mappings when running EVM. Specify the weight for each EVM run separated by a space. Example 10 8 10
-
-    --additional-spaln-options ADDITIONAL_SPALN_OPTIONS
-
-    Additional spaln options to run it, see spaln help for more information about the possible options.
-
-    7.9 Running PASA:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome genome
-
-    Path to the fasta genome.
-
-    --pasadb pasadb
-
-    Name of the pasa database, it must coincide with the name in pasa_config.
-
-    --transcripts transcripts
-
-    Path to the fasta with transcript evidence.
-
-    --pasa-config pasa_config
-
-    Path to the pasa configuration file.
-
-    --cufflinks cufflinks
-
-    Path to the cufflinks gtf file. (Optional)
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --pasa-dir PASA_DIR Directory to keep all the pasa outputs. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/pasa/
-
-    Pasa parameters:
-
-    --pasa-CPU PASA_CPU
-
-    Number of pasa_CPUs to run Pasa. Default 8
-
-    --pasa-step PASA_STEP
-
-    Step from where to start running Pasa. Default 1
-
-    --pasa-weights PASA_WEIGHTS [PASA_WEIGHTS ...]
-
-    Weights given to pasa mappings when running EVM. Specify the weight for each EVM run separated by a space. Example 8 10 8
-
-    --create-database If specified, create pasa database.
-
-    7.10 Running transdecoder:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome genome
-
-    Path to the fasta genome.
-
-    --pasadb pasadb
-
-    Name of the pasa database, it must coincide with the name in pasa_config.
-
-    --transcripts transcripts
-
-    Path to the fasta with transcript evidence.
-
-    Outputs:
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --output-dir OUTPUT_DIR
-
-    Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --pasa-dir PASA_DIR
-
-    Directory to keep all the pasa outputs. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/pasa/
-
-    Transdecoder parameters:
-
-    --transdecoder-weights TRANSDECODER_WEIGHTS [TRANSDECODER_WEIGHTS ...]
-
-    Weights given to pasa transdecodergff3 output file when running EVM. Specify the weight for each EVM run separated by a space. Example 3 2 3
-
-    7.11 Running EVM:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome genome
-
-    Path to the fasta genome.
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --pasa-dir PASA_DIR
-
-    Directory to keep all the pasa outputs. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/pasa/
-
-    --spaln-weights SPALN_WEIGHTS [SPALN_WEIGHTS ...]
-
-    Weights given to spaln mappings when running EVM. Specify the weight for each EVM run separated by a space. Example 10 8 10
-
-    Outputs:
-
-    --update-dir UPDATE_DIR
-
-    Directory to keep the files for annotation update step. Default step05_annotation_update.V01/
-
-    Evm parameters:
-
-    --evm-script EVM_SCRIPT
-
-    Script to run EVM. Default /project/devel/aateam/bin/annotation_scripts/evm.sh
-
-    7.12 Running Annotation Update:
-
-    When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it.
-
-    Inputs:
-
-    --genome genome
-
-    Path to the fasta genome.
-
-    --EVM-inputs EVM_INPUTS
-
-    Directory to keep the files for the EVM step. Default step04_EVM.V01/
-
-    --pasa-dir PASA_DIR
-
-    Directory to keep all the pasa outputs. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/pasa/
-
-    --pasadb pasadb
-
-    Name of the pasa database, it must coincide with the name in pasa_config.
-
-    --update-config update_config
-
-    Path to the Pasa configuration file.
-
-    --project-name project_name [project_name ...]
-
-    Name of the project and version of the annotation space separated, to give the names to the final annotation output.
-
-    --geneid-parameters geneid_parameters
-
-    Path to the geneid parameters file.
-
-    Outputs:
-
-    --annotation-version ANNOTATION_VERSION
-
-    Version of the annotation process. Default 01
-
-    --annotation-step ANNOTATION_STEP
-
-    Step of the annotation pipeline in the annotation process. Default 3
-
-    --update-dir UPDATE_DIR
-
-    Directory to keep the files for annotation update step. Default step05_annotation_update.V01/
-
-
+       tRNAscan: Program to detect transfer RNA genes in genomic sequences. 
+Download from: http://lowelab.ucsc.edu/software/tRNAscan-SE.tar.Z
+
+       BLAST: To find regions of local similarity between sequences. 
+Download and get installation instructions from: http://blast.ncbi.nlm.nih.gov/Blast.cgi?PAGE_TYPE=BlastDocs&DOC_TYPE=Download
+
+
+3)Detailed explanation of each step 
+The CNAG annotation pipeline uses a combination of the Program to Assemble Spliced Alignments (PASA) and Evidence Modeler (EVM) to obtain consensus coding sequence (CDS) models using three main sources of evidence: aligned transcripts, aligned proteins, and gene predictions.
+
+3.1 Ab initio gene predictions:
+Four different ab initio gene predictors are included in the pipeline. To run them it is needed to give as options the species-specific parameter file that each tool needs and the path to the genome masked for species specific repeats. The four gene predictors contained in the pipeline are:
+   Geneid
+   Augustus
+   GlimmmerHMM
+   Genemark-ES
+
+3.2 Homology searches:
+   Program to Assemble Spliced Alignments (PASA) is used to map RNA-seq evidence models produced by cufflinks and transcript evidence in fasta format to the assembled genome. 
+   After running PASA it is possible to run the transdecoder step which finds coding regions in the transcripts. 
+   Spaln is used to map protein evidence in fasta format to the genome. 
+
+3.3 Gene predictors with evidence:
+When mapping the RNA-seq data to the genome assembly (step not included in the pipeline yet), it is possible to get intron junctions to help the ab initio gene predictors.
+Geneid, Augustus and Genemark-ET can be run with these junctions as hints, which can help to produce better predictions. Only those junctions predicted in areas where we have coding evidence are used. There are two ways of giving these junctions to the pipeline: already processed for coding regions or directly all the junctions outputted by Gem, in the latter case the pipeline runs a step of junction processing, in which it selects those junctions present in spaln, geneid and augustus ab initio outputs. 
+
+3.4 EVM:
+Once all the previous steps have finished the pipeline combines everything and produces consensus coding sequence models with EvidenceModeler (EVM). By default, the pipeline runs EVM with three different weight files and afterwards it selects the output with better specificity and sensitivity to the RNA-seq mappings. If desired you can change the weights of each evidence step and/or generate more or less weight files by modifying the json configuration file. 
+
+3.5 Annotation update:
+The consensus CDS models are then updated with UTRs and alternative exons through two rounds of PASA’s annotation updates. A final round of quality control is performed, fixing reading frames, intron phases and removing some trancscripts with NMDs. The resulting transcripts are then clustered into genes using shared splice sites or significant sequence overlap as criteria for designation as the same gene. Systematic identifiers with the prefix and version specified with the “project-name” option of the json parameter file are assigned to the genes, transcripts and protein products derived from them.
+
+3.6 ncRNA annotation:
+In order to get the small ncRNAs present in the genome, tRNAscanSE and the program cmsearch that comes with Infernal are run. tRNAscanSE is used to detect transfer RNAs and cmsearch explores the DNA sequence to detect members of different RNA families present in the RFAM database.
+Those PASA assemblies obtained from the RNAseq data and the transcript evidence that do not map a gene present in the final annotation are considered lncRNAs if they are longer than 200bp. Finally, the lncRNAs are classified into pseudogenes (if they have a certain homology to proteins), repeats (if they are present in the repeats annotation), small ncRNAs (if they match with an annotation produced by infernal or tRNAscanSE) or unknown (if they do not match any of the previous criteria).
+The resulting transcripts are then clustered into genes using shared splice sites or significant sequence overlap as criteria for designation as the same gene. Systematic identifiers with the prefix specified with the “project-name” option of the json parameter file, nc and the version specified in the ncRNA-version option, are assigned to the genes, transcripts and protein products derived from them (eg. If the project is called test1 and the ncRNA version is A, the identifiers will be “test1ncA”).
+
+
+4) Creating the configuration file
+The python script create_config_file.V03.py needs to be run previous to the annotation pipeline to generate the json configuration file containing all the parameters that will be used when running the pipeline. The parameters of the json configuration file are divided into different categories.
+The first compulsory argument is the “-jsonFile” option, that gives the name of the configuration file to be written. 
+Next, you can specify which jobs you do not want to run, if any, by saying “- - no-stepname”. For example, if you specify “- -no-geneid” it will run the whole pipeline except the geneid step. In this General category it is also needed to give the pipeline Home directory, which is where it will look for all the scripts. 
+ 
+General Parameters: 
+--no-geneid If specified, do not run geneid step. 
+--no-augustus If specified, do not run augustus step. 
+--no-genemark If specified, do not run genemark step. 
+--no-glimmer If specified, do not run glimmer step. 
+--no-geneid-introns If specified, do not run geneid with introns step. 
+--no-augustus-introns If specified, do not run augustus with introns step. 
+--no-genemark-ET If specified, do not run genemark-ET step. 
+--no-spaln If specified, do not run spaln step. 
+--no-pasa If specified, do not run pasa step. 
+--no-transdecoder If specified, do not run transdecoder step. 
+--no-evm If specified, do not run EVM step. 
+--no-update If specified, do not run the annotation update step. 
+--no-ncRNA-annotation If specified, do not run the ncRNA annotation. 
+--pipeline-HOME pipeline_HOME 
+Path to the pipeline home directory. Default /project/devel/aateam/src/Annotation_pipeline.V03/ 
+
+Once you have decided which steps you want to run, there are some compulsory parameters that need to be given for those steps. If you try to run the script at this point it will show an error message with all the the compulsory options that you need for those steps. For example, if you mean to run any ab initio gene predictor it will ask you to give the masked genome and for the rest of steps it will ask for the genome without masking.
+
+After having given all the input options, you can change some of the default parameters. In the help of the create_config_file.V03.py script there is a detailed information of all the parameters classified by step and its default values. 
+
+It is important to make sure that the input and output parameters point to the desire location, check this in the json configuration file before running the pipeline and change them by running again the “create_config_file.V03.py” if needed. 
+
+Defining weights for the EVM step: EVM combines all the gene predictions and homology searches and produces consensus coding sequence models. By default, the pipeline runs EVM with three different weight files and afterwards it selects the output with better specificity and sensitivity to the RNA-seq mappings. It is possible to change the default values of the weights by specifying the option “- -stepname-weights”. For example, if you add the option “- -augustus-weights 2 1 2”, the weights for augustus will be 2 in weights_1.txt, 1 in weights_2.txt and 2 in weights_3.txt. 
+
+
+5) Changing the spec file
+The jip environment allows the definition of the characteristics of each job that the pipeline will launch to the cluster. It is possible to change the default parameters by changing the annotation_pipeline.V03.spec file. In there, you can specify values such as the queue where you want to launch each job, the number of CPUs needed, the time, the priority, etc. Default values for each job have been tested and seem to be the appropriate ones to ensure the correct finalization of that job in our environment and with the data we usually have, if these parameters do not seem appropriate for you, you should change them.
+
+
+6) Running the script annotation_pipeline.V03.jip
+If the configuration and the spec file have been correctly defined, everything should be ready to run the annotation_pipeline.V03.jip script. The only option it takes is “-c” which should contain the name of the configuration file. 
+Note that some of the jobs will have as dependency other steps of the pipeline, so they will wait until their dependencies finish to start running. 
+
+
+7)Examples
+ 
+Example for running the whole pipeline:
+./create_config_file.V03.py -jsonFile test.json --genome genome.scaffolds.fa --genome-masked genome.scaffolds.masked.fa --geneid-parameters training_geneid/H.sapiens.geneid.optimized.U12.param --proteins proteins.fasta --transcripts transcripts.fasta --pasa-config alignAssembly.config --pasadb pasa_db --cufflinks cufflinks.gtf --glimmer-directory training_glimmer/TrainGlimmM2014-11-13D18:10:20/ --species human --junctions junctions_all.gff --project-name HSAP 1A --extrinsic-file-augustus-introns extrinsic.M.RM.E.W.cfg --update-config annotCompare.config --junctions junctions.gff -- ncRNA-version A --RM-gff RepeatMasker.out.gff 
+./annotation_pipeline.V03.jip -c test.json -- submit
+
+7.1 Running Augustus:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change them. 
+ 
+Inputs:
+--genome-masked genome_masked 
+Path to the fasta genome masked. 
+--species species Species name to run augustus with its trained parameters. 
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--augustus-prediction AUGUSTUS_PREDICTION 
+Output file for the augustus predictions. Default step 03_annotation_pipeline.V01//gene_predictions/augustus/ augustus_gene_prediction.gff3 
+--augustus-preEVM AUGUSTUS_PREEVM 
+Output file for the augustus predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3 
+
+Augustus parameters: 
+--masked-chunks MASKED_CHUNKS 
+Number of chunks of the masked genome for parallelizing some gene predictors run. Default 50 
+--aug-alternatives-from-sampling {true,false} 
+Report alternative transcripts generated through probabilistic sampling. For augustus and augustus with hints. Default true 
+--aug-uniqueGeneId {true,false} 
+If true, output gene identifyers like this: seqname.gN. For augustus and augustus with hints. Default true 
+--aug-gff3 {ON,OFF,on,off} 
+Output in gff3 format. For augustus and augustus with hints. Default ON 
+--aug-sample AUG_SAMPLE
+For augustus and augustus with introns. Default 60 
+--aug-noInFrameStop {true,false} 
+Do not report transcripts with in-frame stop codons. Otherwise, intron-spanning stop codons could occur. For augustus and augustus with hints. Default true 
+--aug-maxtracks AUG_MAXTRACKS 
+Maximum number of tracks allowed. For augustus and augustus with hints. Default 2 
+--aug-singlestrand {true,false} 
+Predict genes independently on each strand, allow overlapping genes on opposite strands. For augustus and augustus with hints. Default false 
+--aug-strand {both,forward,backward} 
+For augustus and augustus with hints. Default both 
+--aug-min-intron-len AUG_MIN_INTRON_LEN 
+Minimum predicted intron length. For augustus and augustus with hints. Default 30 
+--augustus-weights AUGUSTUS_WEIGHTS [AUGUSTUS_WEIGHTS ...] 
+Weights given to augustus predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 2 2 1 
+--additional-augustus-options ADDITIONAL_AUGUSTUS_OPTIONS 
+Additional augustus options to run it, see augustus help for more information about the possible options. 
+ 
+7.2 Running Geneid:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+ 
+Inputs:
+--genome-masked genome_masked 
+Path to the fasta genome masked. 
+--geneid-parameters geneid_parameters 
+Path to the geneid parameters file.
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--geneid-prediction GENEID_PREDICTION 
+Output file for the geneid predictions. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid.gff3 
+--geneid-preEVM GENEID_PREEVM 
+Output file for the geneid predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3 
+
+Geneid parameters: 
+--masked-chunks MASKED_CHUNKS 
+Number of chunks of the masked genome for parallelizing some gene predictors run. Default 50 
+--geneid-weights GENEID_WEIGHTS [GENEID_WEIGHTS ...]
+Weights given to geneid predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 2 1 2 
+--geneid-options GENEID_OPTIONS 
+Desired geneid options to run it, see geneid documentation for more information. Default 3U 
+
+7.3 Running Glimmer:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome-masked genome_masked 
+Path to the fasta genome masked. 
+--glimmer-directory glimmer_directory 
+Path to the directory containing the trained parameters for running glimmer. 
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--glimmer-prediction GLIMMER_PREDICTION 
+Output file for the glimmer predictions. Default step03_annotation_pipeline.V01//gene_predictions/glimmer.gff3 
+--glimmer-preEVM GLIMMER_PREEVM 
+Output file for the glimmer predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/glimmer_preEVM.gff3 
+
+Glimmer parameters: 
+--glimmer-weights GLIMMER_WEIGHTS [GLIMMER_WEIGHTS ...] 
+Weights given to glimmer predictions when running EVM.Specify the weight for each EVM run separated by a space. Example 1 1 1 
+
+7.4 Running Genemark-ES:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome-masked genome_masked 
+Path to the fasta genome masked. 
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--genemark-prediction GENEMARK_PREDICTION 
+Output file for the genemark predictions. Default step03_annotation_pipeline.V01//gene_predictions/genemark.gtf 
+--genemark-preEVM GENEMARK_PREEVM 
+Output file for the genemark predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/genemark_preEVM.gff3 
+
+Genemark parameters: 
+--gmk-min-contig GMK_MIN_CONTIG 
+Will ignore contigs shorter then min_contig in training. Default 50000 
+--gmk-max-contig GMK_MAX_CONTIG 
+Will split input genomic sequence into contigs shorter than max_contig. Default 5000000 
+--gmk-max-gap GMK_MAX_GAP 
+Will split sequence at gaps longer than max_gap. Letters 'n' and 'N' are interpreted as standing within gaps. Default 5000 
+--gmk-cores GMK_CORES 
+Number of threads for running genemark. Default 8 
+--additional-genemark-options ADDITIONAL_GENEMARK_OPTIONS 
+Additional genemark options to run it, see genemark documentation for more information. 
+--genemark-weights GENEMARK_WEIGHTS [GENEMARK_WEIGHTS ...] 
+Weights given to genemark predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 1 1 1 
+
+7.5 Running Geneid with introns:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome-masked genome_masked 
+Path to the fasta genome masked. 
+--geneid-parameters geneid_parameters 
+Path to the geneid parameters file.
+--junctions junctions 
+Path to the junctions gff file to run gene predictors with introns. Do not needed if incoding junctions existent file is given .
+--incoding-junctions incoding_junctions 
+Path to the junctions in coding regions gff file to run gene predictors with introns. (Optional, it can begiven if this file already exists or if you want to keep the processed incoding junctions in that concrete path.) 
+--geneid-preEVM GENEID_PREEVM 
+Output file for the geneid predictions converted for EVM. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3 
+--augustus-preEVM AUGUSTUS_PREEVM 
+Output file for the augustus predictions converted for EVM. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3 
+--spaln-cds SPALN_CDS 
+Output file for the spaln output in a cds gff3 format. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_cds.gff3 
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--geneid-introns-prediction GENEID_INTRONS_PREDICTION 
+Output file for the geneid with introns predictions. Default step03_annotation_pipeline.V01//gene_predictions/geneid_with_introns/geneid_introns.gff3 
+--geneid-introns-preEVM GENEID_INTRONS_PREEVM 
+Output file for the geneid with introns predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3 
+
+Geneid Introns parameters: 
+--masked-chunks MASKED_CHUNKS 
+Number of chunks of the masked genome for parallelizing some gene predictors run. Default 50 
+--geneid-introns-weights GENEID_INTRONS_WEIGHTS [GENEID_INTRONS_WEIGHTS ...] 
+Weights given to geneid with intron predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 3 3 3 
+--geneid-introns-options GENEID_INTRONS_OPTIONS 
+Desired geneid with intron options to run it, see geneid documentation for more information. Default 3U 
+
+7.6 Running Augustus with hints:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome-masked genome_masked 
+Path to the fasta genome masked. 
+--species species Species name to run augustus with its trained parameters. 
+--junctions junctions 
+Path to the junctions gff file to run gene predictors with introns. Do not needed if incoding junctions existent file is given .
+--incoding-junctions incoding_junctions 
+Path to the junctions in coding regions gff file to run gene predictors with introns. (Optional, it can be given if this file already exists or if you want to keep the processed incoding junctions in that concrete path.) 
+--geneid-preEVM GENEID_PREEVM 
+Output file for the geneid predictions converted for EVM. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3 
+--augustus-preEVM AUGUSTUS_PREEVM 
+Output file for the augustus predictions converted forEVM. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3 
+--spaln-cds SPALN_CDS 
+Output file for the spaln output in a cds gff3 format. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_cds.gff3 
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--augustus-introns-prediction AUGUSTUS_INTRONS_PREDICTION 
+Output file for the augustus with introns predictions. 
+Default step03_annotation_pipeline.V01//gene_predictions/augustus_with_introns/augustus_introns.gff3 
+--augustus-introns-preEVM AUGUSTUS_INTRONS_PREEVM 
+Output file for the augustus with introns predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3 
+
+Augustus Introns parameters: 
+--masked-chunks MASKED_CHUNKS 
+Number of chunks of the masked genome for parallelizing some gene predictors run. Default 50 
+--aug-alternatives-from-sampling {true,false} 
+Report alternative transcripts generated through probabilistic sampling. For augustus and augustus with hints. Default true 
+--aug-uniqueGeneId {true,false} 
+If true, output gene identifyers like this: seqname.gN. For augustus and augustus with hints. Default true 
+--aug-gff3 {ON,OFF,on,off} 
+Output in gff3 format. For augustus and augustus with hints. Default ON 
+--aug-sample AUG_SAMPLE
+For augustus and augustus with introns. Default 60 
+--aug-noInFrameStop {true,false} 
+Do not report transcripts with in-frame stop codons. Otherwise, intron-spanning stop codons could occur. For augustus and augustus with hints. Default true 
+--aug-maxtracks AUG_MAXTRACKS 
+Maximum number of tracks allowed. For augustus and augustus with hints. Default 2 
+--aug-singlestrand {true,false} 
+Predict genes independently on each strand, allow overlapping genes on opposite strands. For augustus and augustus with hints. Default false 
+--aug-strand {both,forward,backward} 
+For augustus and augustus with hints. Default both 
+--aug-min-intron-len AUG_MIN_INTRON_LEN 
+Minimum predicted intron length. For augustus and augustus with hints. Default 30 
+--augustus-introns-weights AUGUSTUS_INTRONS_WEIGHTS [AUGUSTUS_INTRONS_WEIGHTS ...] 
+Weights given to augustus with intron predictions when running EVM. Specify the weight for each EVM run by a space. Example 3 3 3 
+--additional-augustus-introns-options ADDITIONAL_AUGUSTUS_INTRONS_OPTIONS 
+Desired augustus with intron options to run it, see augustus documentation for more information. 
+
+7.7 Running Genemark-ET:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome-masked genome_masked 
+Path to the fasta genome masked. 
+--junctions junctions 
+Path to the junctions gff file to run gene predictors with introns. Do not needed if incoding junctions existent file is given .
+--incoding-junctions incoding_junctions 
+Path to the junctions in coding regions gff file to run gene predictors with introns. (Optional, it can be given if this file already exists or if you want to keep the processed incoding junctions in that concrete path.) 
+--geneid-preEVM GENEID_PREEVM 
+Output file for the geneid predictions converted for EVM. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//gene_predictions/geneid/geneid_preEVM.gff3 
+--augustus-preEVM AUGUSTUS_PREEVM 
+Output file for the augustus predictions converted for EVM. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//gene_predictions/augustus/augustus_preEVM.gff3 
+--spaln-cds SPALN_CDS 
+Output file for the spaln output in a cds gff3 format. Needed to get the processed in coding junctions. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_cds.gff3 
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--genemark-ET-prediction GENEMARK_ET_PREDICTION 
+Output file for the genemark-ET predictions. Default step03_annotation_pipeline.V01//gene_predictions/genemark-ET.gtf 
+--genemark-ET-preEVM GENEMARK_ET_PREEVM 
+Output file for the genemark-ET predictions converted for EVM. Default step03_annotation_pipeline.V01//gene_predictions/genemark-ET_preEVM.gff3 
+
+Genemark-ET parameters: 
+--gmk-min-contig GMK_MIN_CONTIG 
+Will ignore contigs shorter then min_contig in training. Default 50000 
+--gmk-max-contig GMK_MAX_CONTIG 
+Will split input genomic sequence into contigs shorter than max_contig. Default 5000000 
+--gmk-max-gap GMK_MAX_GAP 
+Will split sequence at gaps longer than max_gap. Letters 'n' and 'N' are interpreted as standing within gaps. Default 5000 
+--gmk-cores GMK_CORES 
+Number of threads for running genemark. Default 8 
+--et-score ET_SCORE 
+Minimum score of intron in initiation of the ET algorithm. Default 4 
+--additional-genemark-ET-options ADDITIONAL_GENEMARK_ET_OPTIONS 
+Additional genemark-ET options to run it, see genemark documentation for more information. 
+--genemark-ET-weights GENEMARK_ET_WEIGHTS [GENEMARK_ET_WEIGHTS ...] 
+Weights given to genemark-ET predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 3 3 3 
+
+7.8 Running Spaln:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome genome 
+Path to the fasta genome.
+--proteins proteins 
+Path to the fasta with protein evidence.
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--spaln-gene SPALN_GENE 
+Output file for the spaln output in a gene gff3 format. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_gene.gff3 
+--spaln-cds SPALN_CDS 
+Output file for the spaln output in a cds gff3 format. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/spaln/proteins_spaln_cds.gff3 
+
+Spaln parameters: 
+--spaln-ya {0,1,2,3} 
+Stringency of splice site. 0->3: strong->weak. Default 1 
+--spaln-M {0,1,2,3,4} 
+Number of outputs per query (max=4 for genome vs cDNA|protein). Default 4 
+--spaln-O {0,1,2,3,4,5,6,7,8,9,10,11,12} 
+0:Gff3_gene; 1:alignment; 2:Gff3_match; 3:Bed; 4:exon- inf; 5:intron-inf; 6:cDNA; 7:translated; 8: block- only; 12: binary. Default 0 
+--spaln-Q {0,1,2,3,4,5,6,7}
+0:DP; 1-3: HSP-Search; 4-7; Block-Search. Default 7 
+--spaln-t SPALN_T 
+Number of threads. Default 8 
+--spaln-weights SPALN_WEIGHTS [SPALN_WEIGHTS ...] 
+Weights given to spaln mappings when running EVM. Specify the weight for each EVM run separated by a space. Example 10 8 10 
+--additional-spaln-options ADDITIONAL_SPALN_OPTIONS 
+Additional spaln options to run it, see spaln help for more information about the possible options. 
+
+7.9 Running PASA:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome genome 
+Path to the fasta genome.
+--pasadb pasadb 
+Name of the pasa database, it must coincide with the name in pasa_config. 
+--transcripts transcripts 
+Path to the fasta with transcript evidence. 
+--pasa-config pasa_config 
+Path to the pasa configuration file. 
+--cufflinks cufflinks 
+Path to the cufflinks gtf file. (Optional)
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--pasa-dir PASA_DIR 
+Directory to keep all the pasa outputs. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/pasa/
+
+Pasa parameters: 
+--pasa-CPU PASA_CPU 
+Number of pasa_CPUs to run Pasa. Default 8 
+--pasa-step PASA_STEP 
+Step from where to start running Pasa. Default 1 
+--pasa-weights PASA_WEIGHTS [PASA_WEIGHTS ...] 
+Weights given to pasa mappings when running EVM. Specify the weight for each EVM run separated by a space. Example 8 10 8 
+--pasa-home PASA_HOME 
+Path to the PASAHOME directory. Default /project/devel/aateam/bin/PASApipeline-2.0.1 
+--create-database If specified, create pasa database.
+
+7.10 Running transdecoder:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome genome 
+Path to the fasta genome.
+--pasadb pasadb 
+Name of the pasa database, it must coincide with the name in pasa_config. 
+--transcripts transcripts 
+Path to the fasta with transcript evidence. 
+
+Outputs:
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01 
+--output-dir OUTPUT_DIR 
+Directory to keep the outputs of the first annotation steps. Default step03_annotation_pipeline.V01/ 
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/ 
+--pasa-dir PASA_DIR 
+Directory to keep all the pasa outputs. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/pasa/
+
+Transdecoder parameters: 
+--transdecoder-weights TRANSDECODER_WEIGHTS [TRANSDECODER_WEIGHTS ...] 
+Weights given to pasa transdecodergff3 output file when running EVM. Specify the weight for each EVM run separated by a space. Example 3 2 3
+
+7.11 Running EVM:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome genome 
+Path to the fasta genome.
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/
+--pasa-dir PASA_DIR 
+Directory to keep all the pasa outputs. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/pasa/
+--spaln-weights SPALN_WEIGHTS [SPALN_WEIGHTS ...] 
+Weights given to spaln mappings when running EVM. Specify the weight for each EVM run separated by a space. Example 10 8 10 
+
+Outputs:
+--update-dir UPDATE_DIR 
+Directory to keep the files for annotation update step. Default step05_annotation_update.V01/
+
+Evm parameters: 
+--evm-script EVM_SCRIPT 
+Script to run EVM. Default /project/devel/aateam/src/Annotation_pipeline.V03/scripts/evm.V02.sh
+
+7.12 Running Annotation Update:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome genome 
+Path to the fasta genome.
+--EVM-inputs EVM_INPUTS 
+Directory to keep the files for the EVM step. Default step04_EVM.V01/
+--pasa-dir PASA_DIR 
+Directory to keep all the pasa outputs. Default step03_annotation_pipeline.V01//protein_and_transcript_mappings/pasa/
+--pasadb pasadb 
+Name of the pasa database, it must coincide with the name in pasa_config. 
+--update-config update_config 
+Path to the Pasa configuration file. 
+--project-name project_name [project_name ...] 
+Name of the project and version of the annotation space separated, to give the names to the final annotation output.
+--geneid-parameters geneid_parameters 
+Path to the geneid parameters file.
+
+Outputs:
+--annotation-version ANNOTATION_VERSION 
+Version of the annotation process. Default 01
+--annotation-step ANNOTATION_STEP 
+Step of the annotation pipeline in the annotation process. Default 3 
+--update-dir UPDATE_DIR 
+Directory to keep the files for annotation update step. Default step05_annotation_update.V01/
+
+7.13 Running ncRNA annotation steps:
+When running this step you need to make sure that the following parameters are specified and that they have the correct values. The ones without a default value (the inputs) are the ones that you are forced to give, the rest will get the default value unless you change it. 
+
+Inputs:
+--genome genome 
+Path to the fasta genome.
+--project-name project_name project_name 
+Name of the project and version of the annotation space separated, to give the names to the final annotation output. 
+--ncRNA-version ncRNA_version 
+Version of the ncRNA annotation, to give the names to the final annotation output. 
+--RM-gff RM_gff
+Path to the Repeat Masker gff output.
+--proteins proteins
+Path to the fasta with protein evidence. 
+
+Outputs:
+--ncRNA-annotation-dir NCRNA_ANNOTATION_DIR
+Directory to keep the files of the ncRNA annotation step. Default step06_ncRNA_annotation.V01/ 
+--out-cmsearch OUT_CMSEARCH 
+Output file to keep the cmsearch results. Default step06_ncRNA_annotation.V01//cmsearch.tbl 
+--out-tRNAscan OUT_TRNASCAN 
+Output file to keep the tRNAscan-SE results. Default step06_ncRNA_annotation.V01//tRNAscan-SE/tRNAscan.out 
+
+ncRNA Annotation parameters: 
+--Rfam RFAM
+CM file with the Rfam library. Default /scratch/devel/ talioto/de_novo_annotation/turbot/rna_annotation/CMs/R fam.cm 
+--cmsearch-CPUs CMSEARCH_CPUS 
+Number of CPUs to run cmsearch Default 16 
+--genome-chunks GENOME_CHUNKS 
+Number of chunks of the genome for parallelizing tRNAscanSE. Default 20
+--protein-chunks PROTEIN_CHUNKS 
+Number of chunks to split the protein files for running blast and classify the lncRNAs. Default 100 
+
+8) Restarting the pipeline
+If the pipeline dies before finishing all the steps, it is possible to restart it with the same command. Thanks to the jip envioronment, if the output of a concrete step is present, that step will be skipped when trying to run the pipeline. Also, if a step dies before finishing, it will delete the output files, so the step can be started again when rerunning the pipeline. 
 
