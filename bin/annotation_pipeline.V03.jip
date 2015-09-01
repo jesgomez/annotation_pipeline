@@ -724,7 +724,7 @@ if cfg["Parameters"]["run_ncRNA_annotation"]:
     joblncRNAannotation = job("lncRNA" ,\
         log = dirlncRNAOutputOut + "lncRNA.err", \
         out = dirlncRNAOutputOut + "lncRNA.out").\
-        run ('runlncRNAannotation', global_log=str(global_log),home_dir=HOME, ncRNA_DIR=dirlncRNAOutput, coding= jobAnnotationUpdate.output, PASA_out=jobPasa.output , name=project_name[0] , version=ncRNA_version, lncRNA_output=dirlncRNAOutput+ "/lncRNA_annotation.nonclassified.gff3", genome=genome_reference, RM=RepeatMasker, proteins = proteins, annotated_proteins = jobAnnotationUpdate.protein_output, chunks=protein_chunks, blast_proteins_dir= "blast_proteins", blast_annotated_dir="annotated_proteins" )
+        run ('runlncRNAannotation', global_log=str(global_log),home_dir=HOME, ncRNA_DIR=dirlncRNAOutput, coding= jobAnnotationUpdate.output, PASA_out=jobPasa.output , project=project_name[0] , version=ncRNA_version, lncRNA_output=dirlncRNAOutput+ "/lncRNA_annotation.nonclassified.gff3", genome=genome_reference, RM=RepeatMasker, proteins = proteins, annotated_proteins = jobAnnotationUpdate.protein_output, chunks=protein_chunks, blast_proteins_dir= "blast_proteins", blast_annotated_dir="annotated_proteins" )
 
     listBlastJobs = []
     for i in range(1,protein_chunks + 1 ):
@@ -744,7 +744,7 @@ if cfg["Parameters"]["run_ncRNA_annotation"]:
     jobncRNAannotation = job("ncRNA" ,\
         log = dirlncRNAOutputOut + "ncRNA.err", \
         out = dirlncRNAOutputOut + "ncRNA.out").\
-        run ('runGetncRNAannotation', global_log=str(global_log),home_dir=HOME, ncRNA_DIR = dirlncRNAOutput, blast_proteins_dir=dirlncRNAOutput + "/blast_proteins", blast_annotated_dir = dirlncRNAOutput + "/annotated_proteins"  )
+        run ('runGetncRNAannotation', global_log=str(global_log),home_dir=HOME, ncRNA_DIR = dirlncRNAOutput, blast_proteins_dir=dirlncRNAOutput + "/blast_proteins", blast_annotated_dir = dirlncRNAOutput + "/annotated_proteins",cmsearch_out = jobcmsearch.output, tRNAscan_outs_part = jobtRNAscan, tRNAscan_out = out_tRNAscan, project=project_name[0] , version=ncRNA_version, lncRNA=joblncRNAannotation.lncRNA_output, out =dirlncRNAOutput + "/" + project_name[0] + "nc" + ncRNA_version + ".gff3", snc_output = dirlncRNAOutput + "/" + project_name[0] + ".snc." + ncRNA_version + ".gff3")
 
 
 ##################################################################################################

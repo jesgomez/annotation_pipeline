@@ -55,7 +55,7 @@ while (my $l = <IN>) {
   if ($l =~ m/^[^# ]/) { #Skip gff comments and metainfo and blank lines
     chomp $l;		
     my @gff = split("\t",$l);
-    if ($gff[2] eq 'transcript'){
+    if ($gff[2]=~/transcript|mRNA/){
       $gff[8]=~m/product=([^;]+)/;
       my $protein = $1;
       $gff[8]=~m/ID=([^;]+)/;
@@ -69,10 +69,16 @@ while (my $l = <IN>) {
       #print STDERR "$1\n";
       #$id .= "|$1";
     #}
-    push @{$cds_recs{$p{$id}}},\@gff;
+    push @{$cds_recs{$id}},\@gff;
   }
 }
+my %seen = ();
 foreach my $cdsr (sort keys %cds_recs){
+  if(exists $seen{$p{$cdsr}}){
+    next;
+  }else{
+    $seen{$p{$cdsr}}++;
+  }
   my @sortedexons;
   if ($cds_recs{$cdsr}->[0]->[6] eq '+'){
     @sortedexons = sort {$a->[3]<=>$b->[3]} @{$cds_recs{$cdsr}};
@@ -89,7 +95,7 @@ foreach my $cdsr (sort keys %cds_recs){
   my $cdsobj  = Bio::Seq->new( 
 			      -seq => $ntseq,
 			      -description => $description,
-			    -id  => $cdsr,
+			    -id  => $p{$cdsr},
 			    -alphabet 	=> 'dna',
 			   );
   $nt_out->write_seq($cdsobj);

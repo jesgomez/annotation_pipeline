@@ -2,7 +2,7 @@
 #Run lncRNA annotation
 #
 #Usage:
-# runlncRNAannotation.jip -g <global_log> -e <home_dir> -d <ncRNA_DIR> -r <genome> -a <coding} -o <output> -p <PASA_out> -n <name> -v <version> -l <lncRNA_output> -m <RM> --proteins <proteins> --annotated_proteins <annotated_proteins> -c <chunks> --blast_proteins_dir <blast_proteins_dir> --blast_annotated_dir <blast_annotated_dir>
+# runlncRNAannotation.jip -g <global_log> -e <home_dir> -d <ncRNA_DIR> -r <genome> -a <coding} -o <output> -p <PASA_out> -n <project> -v <version> -l <lncRNA_output> -m <RM> --proteins <proteins> --annotated_proteins <annotated_proteins> -c <chunks> --blast_proteins_dir <blast_proteins_dir> --blast_annotated_dir <blast_annotated_dir>
 #
 #Inputs:
 # -g, --global_log <global_log>               Global log of job states  
@@ -18,25 +18,42 @@
 #Outputs:
 # -l, --lncRNA_output <output>
 #Options:
-# -n, --name <name>                           Project name
+# -n, --project <project>                           Project name
 # -v, --version <version>                     ncRNAannotation version 
 # -c, --chunks <chunks>                       Number of chunks
 # --blast_proteins_dir <blast_proteins_dir>
 # --blast_annotated_dir <blast_annotated_dir>
 #
+
+#%begin validate
+add_output('output_prev2clust', r('${ncRNA_DIR}/lncRNA_annotation.prev2clust.gff3'))
+add_output('output_lncRNA', r('${ncRNA_DIR}/${project}.lnc.${version}.gff3'))
+add_output('output_transcripts_nonclassified', r('${ncRNA_DIR}/lncRNA_transcripts.nonclassified.gff3'))
+add_output('output_RM_BT_lncRNA', r('${ncRNA_DIR}/RM_BT_lncRNA_90.out'))
+add_output('output_lncRNA_BT_RM', r('${ncRNA_DIR}/lncRNA_BT_RM_90.out'))
+add_output('output_nc_RM', r('${ncRNA_DIR}/nc_RM.ids'))
+add_output('output_RM_nc', r('${ncRNA_DIR}/RM_nc.ids'))
+add_output('output_lncRNA_cds', r('${ncRNA_DIR}/${project}.lnc.${version}.cds.fa'))
+add_output('output_lncRNA_pep', r('${ncRNA_DIR}/${project}.lnc.${version}.pep.fa'))
+add_output('output_proteins_blast_dir', r('${ncRNA_DIR}/${blast_proteins_dir}'))
+add_output('output_annotated_blast_dir', r('${ncRNA_DIR}/${blast_annotated_dir}'))
+#%end
+
+
 cd ${ncRNA_DIR}
-${home_dir}/scripts/annotate_lncRNAs.V02.pl ${coding} ${PASA_out} ${name} ${version} > lncRNA_annotation.prev2clust.gff3
-${home_dir}/scripts/assignIDs_generic_fast.v2.pl -a lncRNA_annotation.prev2clust.gff3 -project ${name}.lnc -v ${version}
-gawk '$3!="CDS"' *.${name}.lnc.${version}.gff3 | perl -ane 'chomp;(s/;product=[^\n]+//); print "$_\n";' > lncRNA_annotation.nonclassified.gff3
+${home_dir}/scripts/annotate_lncRNAs.V02.pl ${coding} ${PASA_out} ${project} ${version} > lncRNA_annotation.prev2clust.gff3
+${home_dir}/scripts/assignIDs_generic_fast.v2.pl -a lncRNA_annotation.prev2clust.gff3 -project ${project}.lnc -v ${version}
+gawk '$3!="CDS"' *.${project}.lnc.${version}.gff3 | perl -ane 'chomp;(s/;product=[^\n]+//); print "$_\n";' > lncRNA_annotation.nonclassified.gff3
+mv  *.${project}.lnc.${version}.gff3  ${project}.lnc.${version}.gff3
 gawk '$3=="transcript"' lncRNA_annotation.nonclassified.gff3 > lncRNA_transcripts.nonclassified.gff3
 
 intersectBed -s -f 0.90 -wo -a ${RM} -b lncRNA_transcripts.nonclassified.gff3  > RM_BT_lncRNA_90.out
 intersectBed -s -f 0.90 -wo -a lncRNA_transcripts.nonclassified.gff3 -b ${RM} > lncRNA_BT_RM_90.out
-cat lncRNA_BT_RM_90.out | perl -ne 'if (m/ID=([^;]+)/) {$gene=$1;} if (m/"Motif:([^"]+)/) {$motif=$1;} print "$gene\t$motif\n";' > nc_RM.ids
-cat RM_BT_lncRNA_90.out | perl -ne 'if (m/ID=([^;]+)/) {$gene=$1;} if (m/"Motif:([^"]+)/) {$motif=$1;} print "$gene\t$motif\n";' > RM_nc.ids
+cat lncRNA_BT_RM_90.out | perl -ne 'if (m/ID=([^;]+)/) {$gene="$1\n";} if ($gene=~ s/T([0-9]+)(\n)//){} if (m/"Motif:([^"]+)/) {$motif=$1;} print "$gene\t$motif\n";' > nc_RM.ids
+cat RM_BT_lncRNA_90.out | perl -ne 'if (m/ID=([^;]+)/) {$gene="$1\n";} if ($gene=~ s/T([0-9]+)(\n)//){} if (m/"Motif:([^"]+)/) {$motif=$1;} print "$gene\t$motif\n";' > RM_nc.ids
 
-${home_dir}/scripts/CDS2seq.v2.pl -gff *.${name}.lnc.${version}.gff3 -seq ${genome}
-makeblastdb -in *.${name}.lnc.${version}.cds.fa -dbtype nucl -out lncRNA_cds_db
+${home_dir}/scripts/CDS2seq.v2.pl -gff ${project}.lnc.${version}.gff3 -seq ${genome}
+makeblastdb -in ${project}.lnc.${version}.cds.fa -dbtype nucl -out lncRNA_cds_db
 mkdir ${blast_proteins_dir}
 cd ${blast_proteins_dir}
 ln -s ${proteins} proteins.fa

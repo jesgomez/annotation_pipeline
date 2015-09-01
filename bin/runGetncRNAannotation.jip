@@ -2,25 +2,48 @@
 #Run ncRNA annotation
 #
 #Usage:
-# runGetncRNAannotation.jip -g <global_log> -e <home_dir> -d <ncRNA_DIR> --blast_proteins_dir <blast_proteins_dir> --blast_annotated_dir <blast_annotated_dir>
+# runGetncRNAannotation.jip -g <global_log> -e <home_dir> -d <ncRNA_DIR> --blast_proteins_dir <blast_proteins_dir> --blast_annotated_dir <blast_annotated_dir> -c <cmsearch_out> -t <tRNAscan_outs_part> -n <project> -v <version> -r <tRNAscan_out> -l <lncRNA> -o <out> -s <snc_output>
 #
 #Inputs:
 # -g, --global_log <global_log>               Global log of job states  
 # -e, --home_dir <home_dir>                   Home directory to locate the scripts
 # -d, --ncRNA_DIR <ncRNA_DIR> 
-# 
+# -c, --cmsearch_out <cmsearch_out>           Output of the cmsearch step
+# -t, --tRNAscan_outs_part <tRNAscan_outs_part>...           Output of the tRNAscan step
+# -l, --lncRNA <lncRNA>                       lncRNA annotation, nonclassified
 #Outputs:
-# 
+# -r, --tRNAscan_out <tRNAscan_out>
+# -s, --snc_output <snc_output>               output of the small ncRNA
+# -o, --out <out>                             ncRNA annotation final output
 #Options:
-#
+# -n, --project <project>                           Project name
+# -v, --version <version>                     Version of the ncRNA annotation step
+
+#%begin validate
+add_output('output_proteins_blast', r('${ncRNA_DIR}/proteins.blastp.out'))
+add_output('output_annotated_blast', r('${ncRNA_DIR}/annotated.blastp.out'))
+add_output('output_pseudogenes', r('${ncRNA_DIR}/pseudogenes.ids'))
+add_output('output_pseudogenes', r('${ncRNA_DIR}/small.ids'))
+add_output('output_lncRNA', r('${ncRNA_DIR}/lncRNA_annotation.classified.gff3'))
+#%end
 
 #cd ${ncRNA_DIR}
 cat ${blast_proteins_dir}/*.out | gawk '$13<0.00001' > ${ncRNA_DIR}/proteins.blastp.out
 cat ${blast_annotated_dir}/*.out | gawk '$13<0.00001' > ${ncRNA_DIR}/annotated.blastp.out
 
+cat ${tRNAscan_outs_part} > ${tRNAscan_out}
 #cd ${ncRNA_DIR}
-cat ${ncRNA_DIR}/proteins.blastp.out ${ncRNA_DIR}/annotated.blastp.out | cut -f 2 | sort |uniq > ${ncRNA_DIR}/pseudogenes.ids
+cat ${ncRNA_DIR}/proteins.blastp.out ${ncRNA_DIR}/annotated.blastp.out | cut -f 2 | perl -ane 'if (~ s/P([0-9]+)(\n)//) {print "$_\n";}' | sort |uniq > ${ncRNA_DIR}/pseudogenes.ids
+
+cd ${ncRNA_DIR}
+${home_dir}/scripts/annotate_ncRNAs.V2.pl ${cmsearch_out} ${tRNAscan_out} ${project}.snc. ${version} >  ${snc_output}
+
+gawk '$3=="ncRNA"' ${snc_output} > smallncRNA_annotation.transcripts.gff3
+
+intersectBed -s -f 0.80 -wo -a lncRNA_transcripts.nonclassified.gff3 -b smallncRNA_annotation.transcripts.gff3 >  lncRNA_BT_small_0.80.out
+cat lncRNA_BT_small_0.80.out | perl -ane 'if ($F[8] =~ /ID=([^;]+)/) {$tr="$1\n";} if ($tr =~ s/T([0-9])+(\n)//){}if ($F[17] =~ /ID=([^;]+)/) {$id=$1;} print "$tr\t$id\n";' > small.ids
+
+cat ${lncRNA} |  perl -ne 'BEGIN{open(ID_PS,"<pseudogenes.ids");while (<ID_PS>) {chomp; $ids_pseudo{$_}++;}close ID_PS;open(ID_SMALL, "<small.ids"); while (<ID_SMALL>){chomp; @line_small=split /\t/, $_; $ids_small{$line_small[0]}=$line_small[1];} close ID_SMALL;open(ID,"<nc_RM.ids");while (<ID>){chomp;@line= split /\t/,$_; $ids{$line[0]}=$line[1];}close ID;open (ID2,"<RM_nc.ids");  while (<ID2>) {chomp; @line2 = split /\t/, $_;if (!exists $ids{$line2[0]}) {$ids{$line2[0]} = $line2[1];}}}chomp; if(m/ID=([^;]+)/){$tr="$1\n"; if ($tr =~ s/T([0-9]+)(\n)//) {if (exists $ids{$tr} && !exists $ids_pseudo{$tr_gene[0]} && !exists $ids_small{$tr_gene[0]}) {$_=~s/Description=lncRNA/Description=lncRNA;Class=Repeat:$ids{$tr}/;} elsif (exists $ids_pseudo{$tr}){$_=~s/Description=lncRNA/Description=lncRNA;Class=pseudogene/;}elsif (exists $ids_small{$tr}) {$_=~s/Description=lncRNA/Description=lncRNA;Class=small_ncRNA/;}}}print "$_\n";' > lncRNA_annotation.classified.gff3
+${home_dir}/scripts/merge_ncRNA_lncRNA.pl ${project}.snc.${version}.gff3 lncRNA_annotation.classified.gff3 ${project} ${version} > ${out}
 
 
-
-#${home_dir}/scripts/annotate_ncRNAs.pl cmsearch.tbl trnascan_turbot.out SMAX5 A
