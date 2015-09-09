@@ -1,5 +1,12 @@
 #!/usr/bin/perl
 
+############################################################
+#
+# script to annotate the lncRNAs out of the pasa assemblies which have not been annotated as protein coding.
+#
+# Author: J. Gómez Garrido
+############################################################
+
 use strict;
 use warnings;
 

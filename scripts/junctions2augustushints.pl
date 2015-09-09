@@ -1,5 +1,12 @@
 #!/usr/bin/perl
 
+############################################################
+#
+# script to make the junctions gff3 to the format accepted by Augustus.
+#
+# Author: J. Gómez Garrido
+############################################################
+
 use strict;
 use warnings;
 

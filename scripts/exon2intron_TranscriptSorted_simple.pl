@@ -1,4 +1,10 @@
 #!/usr/bin/env perl
+
+############################################################
+#
+# Author: T. Alioto
+############################################################
+
 use lib "~talioto/myperlmods/bioperl/bioperl-live/";
 use Bio::Tools::GFF;
 use Getopt::Long;

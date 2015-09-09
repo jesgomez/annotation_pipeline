@@ -487,7 +487,7 @@ Step from where to start running Pasa. Default 1
 --pasa-weights PASA_WEIGHTS [PASA_WEIGHTS ...] 
 Weights given to pasa mappings when running EVM. Specify the weight for each EVM run separated by a space. Example 8 10 8 
 --pasa-home PASA_HOME 
-Path to the PASAHOME directory. Default /project/devel/aateam/src/PASApipeline-2.0.2 
+Path to the PASAHOME directory. Default /project/devel/aateam/bin/PASApipeline-2.0.1 
 --create-database If specified, create pasa database.
 
 7.10 Running transdecoder:

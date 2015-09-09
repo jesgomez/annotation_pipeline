@@ -1,5 +1,11 @@
 #!/usr/bin/perl
 
+############################################################
+#
+# script to select the best EVM output after running it with several weights.
+#
+# Author: J. Gómez Garrido
+############################################################
 use strict;
 
 my $gmap_alignments = $ARGV[0];

@@ -1,4 +1,12 @@
 #!/usr/bin/env perl
+
+############################################################
+#
+# script to detect the gene models subject to nmd and filter them out.
+#
+# Author: T. Alioto
+############################################################
+
 use strict;
 #use Getopt::Long;
 #use File::Basename qw( fileparse );

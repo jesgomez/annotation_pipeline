@@ -1,4 +1,12 @@
 #!/usr/bin/env perl
+
+############################################################
+#
+# script to cluster the transcripts into genes and give generic IDs to the annotation.
+#
+# Author: T. Alioto
+############################################################
+
 use strict;
 use Getopt::Long;
 use File::Basename qw( fileparse );

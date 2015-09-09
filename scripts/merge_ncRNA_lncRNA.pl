@@ -1,5 +1,12 @@
 #!/usr/bin/perl
 
+############################################################
+#
+# script to get a consensus ncRNA annotation merging the small ncRNA annotation and the lncRNA annotation.
+#
+# Author: J. Gómez Garrido
+############################################################
+
 use strict;
 use warnings;
 

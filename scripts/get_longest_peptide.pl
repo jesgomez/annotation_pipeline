@@ -1,4 +1,12 @@
 #!/usr/bin/env perl
+
+############################################################
+#
+# script to get the isoform of a gene that codes for the longest peptide.
+#
+# Author: T. Alioto 
+############################################################
+
 use strict;
 my $file = $ARGV[0];
 #now lets get the longest protein per gene

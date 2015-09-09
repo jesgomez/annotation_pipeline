@@ -1,5 +1,13 @@
 #!/usr/bin/perl
 
+############################################################
+#
+# Script to run GlimmerHMM
+#
+# Author: J. Gómez Garrido
+############################################################
+
+
 use strict;
 use warnings;
 

@@ -1,4 +1,11 @@
 #!/usr/bin/env perl
+
+############################################################
+#
+# script to break a multifasta file into n multifasta files.
+# Author: T. Alioto
+############################################################
+
 use Getopt::Long;
 my $description;
 use Bio::SeqIO;

@@ -1726,7 +1726,7 @@ give, the rest will get the default value unless you change it.
 </font></p>
 			<p class="msonormal"><font size="2" style="font-size: 11pt">Path
 			to the PASAHOME directory. Default
-			/project/devel/aateam/src/PASApipeline-2.0.2
+			/project/devel/aateam/bin/PASApipeline-2.0.1
 </font></p>
 			<p class="msonormal"><font size="2" style="font-size: 11pt">--create-database
 			If specified, create pasa database.</font></p>

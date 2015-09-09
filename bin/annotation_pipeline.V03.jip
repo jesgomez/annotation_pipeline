@@ -10,7 +10,7 @@
 #                              [default: false]
 
 #Author: Jessica Gomez, CNAG.
-#Contact email: jgomez@pcb.ub.cat
+#Contact email: jessica.gomez@cnag.crg.eu
 #Date:03242015
 
 
@@ -816,7 +816,9 @@ if cfg["Parameters"]["run_genemark_ET"]:
 if cfg["Parameters"]["run_pasa"]:
     jobCleanTranscripts >> jobPasa 
     if cfg["Parameters"]["run_transdecoder"]:
-        jobPasa >> jobTransdecoder >> jobEvmPrediction
+        jobPasa >> jobTransdecoder 
+        if cfg["Parameters"]["run_evm"]:
+            jobTransdecoder >> jobEvmPrediction
 
 if cfg["Parameters"]["run_evm"]:
     for job in listEvmJobs:

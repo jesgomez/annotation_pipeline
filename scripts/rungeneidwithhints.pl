@@ -1,5 +1,12 @@
 #!/usr/bin/perl
 
+############################################################
+#
+# script to run geneid with hints.
+#
+# Author: J. Gómez Garrido
+############################################################
+
 use strict;
 use warnings;
 

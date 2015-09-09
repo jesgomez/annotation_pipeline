@@ -1,4 +1,9 @@
 #!/usr/bin/env perl
+
+############################################################
+# Author: T. Alioto
+############################################################
+
 use strict;
 use Getopt::Long;
 use lib "/project/devel/aateam/perlmods";

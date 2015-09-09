@@ -1,5 +1,12 @@
 #!/usr/bin/perl
 
+############################################################
+#
+# script to get a small ncRNA annotation taking the outputs of infernam and tRNAscan-SE.
+#
+# Author: J. Gómez Garrido
+############################################################
+
 use strict;
 use warnings;
 

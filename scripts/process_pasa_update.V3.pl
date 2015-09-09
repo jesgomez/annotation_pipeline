@@ -1,5 +1,12 @@
 #!/usr/bin/perl
 
+############################################################
+#
+# script to process the pasa uodates comparing them with the EVM models in order to add some models or changing the updates in some cases.
+#
+# Author: J. Gómez Garrido
+############################################################
+
 use strict;
 use warnings;
 
