@@ -25,7 +25,7 @@ add_output('output_link', r('${EVM_DIR}/augustus_predictions.gff3'))
 cat ${inputs} > ${out}
 
 
-$EVM_PATH/EvmUtils/misc/augustus_to_GFF3.pl ${out} > ${EVM_out}
+$EVM_PATH/EvmUtils/misc/augustus_GFF3_to_EVM_GFF3.pl ${out} > ${EVM_out}
 cd ${EVM_DIR}
 ln -s ${EVM_out} augustus_predictions.gff3
 ${create_weights_file}

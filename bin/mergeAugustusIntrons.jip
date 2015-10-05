@@ -23,7 +23,7 @@ add_output('output_link', r('${EVM_DIR}/augustus_introns_predictions.gff3'))
 
 
 cat ${inputs} > ${out}
-$EVM_PATH/EvmUtils/misc/augustus_to_GFF3.pl ${out} | sed 's/\tAugustus\t/\taugustus_introns\t/g' > ${EVM_out}
+$EVM_PATH/EvmUtils/misc/augustus_GFF3_to_EVM_GFF3.pl ${out} | sed 's/\tAugustus\t/\taugustus_introns\t/g' > ${EVM_out}
 cd ${EVM_DIR}
 ln -s ${EVM_out} augustus_introns_predictions.gff3
 ${create_weights_file}
