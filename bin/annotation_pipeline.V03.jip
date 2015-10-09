@@ -744,7 +744,7 @@ if cfg["Parameters"]["run_ncRNA_annotation"]:
     jobncRNAannotation = job("ncRNA" ,\
         log = dirlncRNAOutputOut + "ncRNA.err", \
         out = dirlncRNAOutputOut + "ncRNA.out").\
-        run ('runGetncRNAannotation', global_log=str(global_log),home_dir=HOME, ncRNA_DIR = dirlncRNAOutput, blast_proteins_dir=dirlncRNAOutput + "/blast_proteins", blast_annotated_dir = dirlncRNAOutput + "/annotated_proteins",cmsearch_out = jobcmsearch.output, tRNAscan_outs_part = jobtRNAscan, tRNAscan_out = out_tRNAscan, project=project_name[0] , version=ncRNA_version, lncRNA=joblncRNAannotation.lncRNA_output, out =dirlncRNAOutput + "/" + project_name[0] + "nc" + ncRNA_version + ".gff3", snc_output = dirlncRNAOutput + "/" + project_name[0] + ".snc." + ncRNA_version + ".gff3")
+        run ('runGetncRNAannotation', global_log=str(global_log),home_dir=HOME, ncRNA_DIR = dirlncRNAOutput, blast_proteins_dir=dirlncRNAOutput + "/blast_proteins", blast_annotated_dir = dirlncRNAOutput + "/annotated_proteins",cmsearch_out = jobcmsearch.output, tRNAscan_out = out_tRNAscan, project=project_name[0] , version=ncRNA_version, lncRNA=joblncRNAannotation.lncRNA_output, out =dirlncRNAOutput + "/" + project_name[0] + "nc" + ncRNA_version + ".gff3", snc_output = dirlncRNAOutput + "/" + project_name[0] + ".snc." + ncRNA_version + ".gff3")
 
 
 ##################################################################################################
@@ -832,7 +832,7 @@ if cfg["Parameters"]["run_evm"]:
 
 if cfg["Parameters"]["run_ncRNA_annotation"]:
     for job in listtRNAscanJobs: 
-        jobSplitGenome >> job 
+        jobSplitGenome >> job >> jobncRNAannotation
 
     for job in listBlastJobs:
         joblncRNAannotation >> job >> jobncRNAannotation

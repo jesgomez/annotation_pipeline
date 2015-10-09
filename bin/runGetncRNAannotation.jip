@@ -2,14 +2,13 @@
 #Run ncRNA annotation
 #
 #Usage:
-# runGetncRNAannotation.jip -g <global_log> -e <home_dir> -d <ncRNA_DIR> --blast_proteins_dir <blast_proteins_dir> --blast_annotated_dir <blast_annotated_dir> -c <cmsearch_out> -t <tRNAscan_outs_part> -n <project> -v <version> -r <tRNAscan_out> -l <lncRNA> -o <out> -s <snc_output>
+# runGetncRNAannotation.jip -g <global_log> -e <home_dir> -d <ncRNA_DIR> --blast_proteins_dir <blast_proteins_dir> --blast_annotated_dir <blast_annotated_dir> -c <cmsearch_out>  -n <project> -v <version> -r <tRNAscan_out> -l <lncRNA> -o <out> -s <snc_output>
 #
 #Inputs:
 # -g, --global_log <global_log>               Global log of job states  
 # -e, --home_dir <home_dir>                   Home directory to locate the scripts
 # -d, --ncRNA_DIR <ncRNA_DIR> 
 # -c, --cmsearch_out <cmsearch_out>           Output of the cmsearch step
-# -t, --tRNAscan_outs_part <tRNAscan_outs_part>...           Output of the tRNAscan step
 # -l, --lncRNA <lncRNA>                       lncRNA annotation, nonclassified
 #Outputs:
 # -r, --tRNAscan_out <tRNAscan_out>
@@ -31,7 +30,7 @@ add_output('output_lncRNA', r('${ncRNA_DIR}/lncRNA_annotation.classified.gff3'))
 cat ${blast_proteins_dir}/*.out | gawk '$13<0.00001' > ${ncRNA_DIR}/proteins.blastp.out
 cat ${blast_annotated_dir}/*.out | gawk '$13<0.00001' > ${ncRNA_DIR}/annotated.blastp.out
 
-cat ${tRNAscan_outs_part} > ${tRNAscan_out}
+cat ${tRNAscan_out}.*.out  > ${tRNAscan_out}
 #cd ${ncRNA_DIR}
 cat ${ncRNA_DIR}/proteins.blastp.out ${ncRNA_DIR}/annotated.blastp.out | cut -f 2 | perl -ane 'if (~ s/P([0-9]+)(\n)//) {print "$_\n";}' | sort |uniq > ${ncRNA_DIR}/pseudogenes.ids
 
