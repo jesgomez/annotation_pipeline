@@ -27,23 +27,23 @@ weights=$version.txt;
 weights_path=$DIR/$weights;
 
 echo partitioning;
-/project/devel/aateam/src/EVM_r2012-06-25/EvmUtils/partition_EVM_inputs.pl --genome $genome --gene_predictions $predictions --protein_alignments $proteins --transcript_alignments $transcripts --segmentSize 2000000 --overlapSize 1000000 --partition_listing partitions_list.out;
+$EVM_PATH/EvmUtils/partition_EVM_inputs.pl --genome $genome --gene_predictions $predictions --protein_alignments $proteins --transcript_alignments $transcripts --segmentSize 2000000 --overlapSize 1000000 --partition_listing partitions_list.out;
 
 echo writing commands;
-/project/devel/aateam/src/EVM_r2012-06-25/EvmUtils/write_EVM_commands.pl --genome $genome --weights $weights_path --gene_predictions $predictions --protein_alignments $proteins --transcript_alignments $transcripts --output_file_name evm_$version.out --partitions partitions_list.out > evm_$version.cmd;
+$EVM_PATH/EvmUtils/write_EVM_commands.pl --genome $genome --weights $weights_path --gene_predictions $predictions --protein_alignments $proteins --transcript_alignments $transcripts --output_file_name evm_$version.out --partitions partitions_list.out > evm_$version.cmd;
 
 /project/devel/aateam/bin/annotation_scripts/split_commands_file_evm.pl evm_$version.cmd 16;
 
 echo running evm
 for ((i=1; i<=16; i++))
   do
- /project/devel/aateam/src/EVM_r2012-06-25/EvmUtils/execute_EVM_commands.pl evm_$version.$i.cmd &
+ $EVM_PATH/EvmUtils/execute_EVM_commands.pl evm_$version.$i.cmd &
  done;
 
 wait
 
 echo collecting outputs;
-/project/devel/aateam/src/EVM_r2012-06-25/EvmUtils/recombine_EVM_partial_outputs.pl --partitions partitions_list.out --output_file_name evm_$version.out;
+$EVM_PATH/EvmUtils/recombine_EVM_partial_outputs.pl --partitions partitions_list.out --output_file_name evm_$version.out;
 
 echo converting to gff3
 /project/devel/aateam/src/EVM_r2012-06-25/EvmUtils/convert_EVM_outputs_to_GFF3.pl --partitions partitions_list.out --output_file_name evm_$version.out --genome $genome;

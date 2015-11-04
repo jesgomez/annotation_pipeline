@@ -93,7 +93,7 @@ foreach my $scaffold (sort keys %ncRNA) {
                 my $type;
                 if ($line[8] =~ m/Type=/) {$type = $';}
                 print "\#\#\#\n$scaffold\tCNAG\tgene\t$start\t$line[4]\t.\t$line[6]\t$line[7]\tID=$gene_id\n";
-                print "$scaffold\tCNAG\ttranscript\t$start\t$line[4]\t$line[5]\t$line[6]\t$line[7]\tID=$gene_id" . "T1;Name=$gene_id" . "T1;Description=$type\n";
+                print "$scaffold\tCNAG\ttranscript\t$start\t$line[4]\t$line[5]\t$line[6]\t$line[7]\tID=$gene_id" . "T1;Parent=$gene_id;Name=$gene_id" . "T1;Description=$type\n";
                 foreach my $exons (sort keys %{$ncRNA_exons{$transcript}}) {
                     my @line = split /\t/, $ncRNA_exons{$transcript}{$exons};
                     my $exon;
@@ -118,7 +118,7 @@ foreach my $scaffold (sort keys %ncRNA) {
                         my @line = split /\t/, $lnctranscript{$gene}{$transcript};
                         if ($line[8] =~ m/Name=([^;]+)/) {$old_id = $1; $attributes = $'}                 
                         if ($old_id =~ m/T/) {$t = $';}              
-                        print "$scaffold\tCNAG\ttranscript\t$line[3]\t$line[4]\t$line[5]\t$line[6]\t$line[7]\tID=$gene_id" . "T" . "$t;Name=$gene_id" . "T" . "$t" . "$attributes\n";
+                        print "$scaffold\tCNAG\ttranscript\t$line[3]\t$line[4]\t$line[5]\t$line[6]\t$line[7]\tID=$gene_id" . "T" . "$t;Parent=$gene_id;Name=$gene_id" . "T" . "$t" . "$attributes\n";
                         foreach my $exons (sort keys %{$ncRNA_exons{$transcript}}) {
                             my @line = split /\t/, $ncRNA_exons{$transcript}{$exons};
                             my $exon;

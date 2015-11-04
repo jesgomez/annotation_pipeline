@@ -10,7 +10,7 @@
 #                              [default: false]
 
 #Author: Jessica Gomez, CNAG.
-#Contact email: jessica.gomez@cnag.crg.eu
+#Contact email: jgomez@pcb.ub.cat
 #Date:03242015
 
 
@@ -68,7 +68,7 @@ while right_log != True:
         global_log = DIR_out + "pipeline_run." + str(i)
 
 #2.1.2 Get genome masked
-if cfg["Parameters"]["run_augustus"] or cfg["Parameters"]["run_geneid"] or cfg["Parameters"]["run_genemark"] or cfg["Parameters"]["run_glimmer"] or cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]: 
+if cfg["Parameters"]["run_augustus"] or cfg["Parameters"]["run_geneid"] or cfg["Parameters"]["run_genemark"] or cfg["Parameters"]["run_glimmer"] or cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_hints"] or cfg["Parameters"]["run_genemark_ET"]: 
 
     masked_reference = cfg["Inputs"]["genome_masked"]
 
@@ -77,7 +77,7 @@ if cfg["Parameters"]["run_augustus"] or cfg["Parameters"]["run_geneid"] or cfg["
     clean_reference_name = reduce(lambda a, kv: a.replace(*kv), repls, name_reference)
 
     #2.1.2 Split masked genome
-    if cfg["Parameters"]["run_augustus"] or cfg["Parameters"]["run_geneid"] or cfg["Parameters"]["run_geneid_introns"]or cfg["Parameters"]["run_augustus_introns"]:
+    if cfg["Parameters"]["run_augustus"] or cfg["Parameters"]["run_geneid"] or cfg["Parameters"]["run_geneid_introns"]or cfg["Parameters"]["run_augustus_hints"]:
         dirChunks = cfg["Outputs"]["dir_masked_chunks"] 
         dirChunksOut = dirChunks + "/out/"
         if not os.path.exists(dirChunksOut):
@@ -115,7 +115,7 @@ if cfg["Parameters"]["run_spaln"] or cfg["Parameters"]["run_pasa"] or cfg["Param
                 basename_reference=clean_reference_genome_name,global_log=str(global_log),home_dir=HOME, genome_chunks=str(genome_chunks))
 
 #2.3 Get junctions
-if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]:
+if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_hints"] or cfg["Parameters"]["run_genemark_ET"]:
     junctions = cfg["Inputs"]["junctions"]
     junctions_basename = os.path.basename(junctions)
     if cfg["Inputs"]["incoding_junctions"]:
@@ -350,7 +350,7 @@ if cfg["Parameters"]["run_spaln"]:
 ##################################################################################################
 ################# INCODING JUNCTIONS                                                  ############
 ##################################################################################################
-if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]:
+if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_hints"] or cfg["Parameters"]["run_genemark_ET"]:
     #9.INCODING JUNCTIONS 
     #9.1 Path Output INCODING JUNCTIONS
     dirJunctions =  cfg["Outputs"]["dir_process_junctions"]
@@ -408,27 +408,29 @@ if cfg["Parameters"]["run_geneid_introns"]:
     jobMergingGeneIdIntrons = job("merge_evm",\
        log = dirGeneidIntronsOutputOut + "merge_evm.err", \
        out = dirGeneidIntronsOutputOut + "merge_evm.out").\
-       run('mergeGeneidIntrons', global_log=str(global_log), EVM_DIR=EVM_DIR, EVM_out=out_evm_geneid_introns, create_weights_file=create_weights_file, inputs = listGeneidIntronsJobs)
+       run('mergeGeneidIntrons', global_log=str(global_log), EVM_DIR=EVM_DIR, EVM_out=out_evm_geneid_introns, create_weights_file=create_weights_file, inputs = listGeneidIntronsJobs, home_dir=HOME)
 
 ##################################################################################################
-################# AUGUSTUS INTRONS                                                    ############
+################# AUGUSTUS HINTS                                                    ############
 ##################################################################################################
 
-if cfg["Parameters"]["run_augustus_introns"]:
-    #11. AUGUSTUS INTRONS
-    out_prediction_augustus_introns = cfg["Outputs"]["augustus_introns_prediction"]
-    out_evm_augustus_introns = cfg["Outputs"]["augustus_introns_preEVM"]   
+if cfg["Parameters"]["run_augustus_hints"]:
+    #11. AUGUSTUS hints
+    out_prediction_augustus_hints = cfg["Outputs"]["augustus_hints_prediction"]
+    out_evm_augustus_hints = cfg["Outputs"]["augustus_hints_preEVM"]   
     EVM_DIR = cfg["Outputs"]["EVM_dir"]
 
-    #11.1 Path Output AUGUSTUS INTRONS
-    dirAugustusIntronsOutput = os.path.dirname(out_prediction_augustus_introns)
-    dirAugustusIntronsOutputOut = dirAugustusIntronsOutput + "/out/"
-    if not os.path.exists(dirAugustusIntronsOutputOut):
-        os.makedirs(dirAugustusIntronsOutputOut)
+    #11.1 Path Output AUGUSTUS HINTS
+    dirAugustusHintsOutput = os.path.dirname(out_prediction_augustus_hints)
+    dirAugustusHintsOutputOut = dirAugustusHintsOutput + "/out/"
+    if not os.path.exists(dirAugustusHintsOutputOut):
+        os.makedirs(dirAugustusHintsOutputOut)
 
-    #11.2 Get AUGUSTUS INTRONS parameters
+    #11.2 Get AUGUSTUS HINTS parameters
     species = cfg["Inputs"]["species"]
-    extrinsic_file = cfg["Inputs"]["extrinsic_file_augustus_introns"]
+    extrinsic_file = cfg["Inputs"]["extrinsic_file_augustus_hints"]
+    if cfg["Inputs"]["ep_hints"]:
+         ep_hints = cfg["Inputs"]["ep_hints"]
     alternatives_from_sampling = cfg["augustus"]["aug_alternatives_from_sampling"]
     uniqueGeneId = cfg["augustus"]["aug_uniqueGeneId"]
     gff3 = cfg["augustus"]["aug_gff3"]
@@ -438,32 +440,32 @@ if cfg["Parameters"]["run_augustus_introns"]:
     singlestrand = cfg["augustus"]["aug_singlestrand"]
     strand = cfg["augustus"]["aug_strand"]
     min_intron_len= cfg["augustus"]["aug_min_intron_len"]
-    augustus_introns_weights = cfg["augustus_introns"]["augustus_introns_weights"]
-    additional_augustus_introns_options = ''
-    if cfg["augustus_introns"]["additional_augustus_introns_options"]:
-        additional_augustus_introns_options = cfg["augustus_introns"]["additional_augustus_introns_options"]
+    augustus_hints_weights = cfg["augustus_hints"]["augustus_hints_weights"]
+    additional_augustus_hints_options = ''
+    if cfg["augustus_hints"]["additional_augustus_hints_options"]:
+        additional_augustus_hints_options = cfg["augustus_hints"]["additional_augustus_hints_options"]
 
     #11.3 Define 1 Job per each masked genome fragment
-    listAugustusIntronsJobs = []
+    listAugustusHintsJobs = []
 
     for i in range(1,masked_chunks+1):
-        jobAugustusIntrons = job("augustus_introns_" + str(i) ,\
-            log = dirAugustusIntronsOutputOut + "augustus_introns_" + str(i) + ".err", \
-            out = dirAugustusIntronsOutputOut + "augustus_introns_" + str(i) + ".out").\
-            run('runAugustusIntrons', masked_chunk=dirChunks + "/" + clean_reference_name + "." + str(i) + ".fa", global_log=str(global_log), home_dir=HOME, out=out_prediction_augustus_introns + "." + str(i), incoding_junctions = jobJunctions.out, extrinsic_file=extrinsic_file,  species=species, alternatives_from_sampling=alternatives_from_sampling, sample=str(sample), gff3=gff3, noInFrameStop=noInFrameStop, uniqueGeneId=uniqueGeneId, maxtracks=str(maxtracks), strand=strand, singlestrand=singlestrand, min_intron_len=str(min_intron_len), additional=additional_augustus_introns_options)
-        listAugustusIntronsJobs.append(jobAugustusIntrons)
+        jobAugustusHints = job("augustus_hints_" + str(i) ,\
+            log = dirAugustusHintsOutputOut + "augustus_hints_" + str(i) + ".err", \
+            out = dirAugustusHintsOutputOut + "augustus_hints_" + str(i) + ".out").\
+            run('runAugustusHints', masked_chunk=dirChunks + "/" + clean_reference_name + "." + str(i) + ".fa", global_log=str(global_log), home_dir=HOME, out=out_prediction_augustus_hints + "." + str(i), incoding_junctions = jobJunctions.out, ep_hints = ep_hints, extrinsic_file=extrinsic_file,  species=species, alternatives_from_sampling=alternatives_from_sampling, sample=str(sample), gff3=gff3, noInFrameStop=noInFrameStop, uniqueGeneId=uniqueGeneId, maxtracks=str(maxtracks), strand=strand, singlestrand=singlestrand, min_intron_len=str(min_intron_len), additional=additional_augustus_hints_options)
+        listAugustusHintsJobs.append(jobAugustusHints)
 
-    #11.4 Merging AUGUSTUS INTRONS and adapting to evm 
+    #11.4 Merging AUGUSTUS Hints and adapting to evm 
     create_weights_file = ""
     f = 1
-    for i in augustus_introns_weights:
-        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\taugustus_introns\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
+    for i in augustus_hints_weights:
+        create_weights_file = create_weights_file + "echo 'ABINITIO_PREDICTION\taugustus_hints\t'" + str(i) + ">> weights_" + str(f) + ".txt\n"      
         f = f + 1
 
-    jobMergingAugustusIntrons = job("merge_evm",\
-       log = dirAugustusIntronsOutputOut + "merge_evm.err", \
-       out = dirAugustusIntronsOutputOut + "merge_evm.out").\
-       run('mergeAugustusIntrons', global_log=str(global_log), EVM_DIR=EVM_DIR, out=out_prediction_augustus_introns, EVM_out=out_evm_augustus_introns, create_weights_file=create_weights_file, masked_chunks = str(masked_chunks), inputs = listAugustusIntronsJobs)
+    jobMergingAugustusHints = job("merge_evm",\
+       log = dirAugustusHintsOutputOut + "merge_evm.err", \
+       out = dirAugustusHintsOutputOut + "merge_evm.out").\
+       run('mergeAugustusHints', global_log=str(global_log), EVM_DIR=EVM_DIR, out=out_prediction_augustus_hints, EVM_out=out_evm_augustus_hints, create_weights_file=create_weights_file, masked_chunks = str(masked_chunks), inputs = listAugustusHintsJobs)
 
 ##################################################################################################
 ################# GENEMARK-ET                                                         ############
@@ -757,7 +759,7 @@ if cfg["Parameters"]["run_augustus"]:
         jobSplitMasked >> job >> jobMergingAugustus
 
     if job_junctions == True:
-        if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]:
+        if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_hints"] or cfg["Parameters"]["run_genemark_ET"]:
             jobMergingAugustus >> jobJunctions
 
     if cfg["Parameters"]["run_evm"]:
@@ -769,7 +771,7 @@ if cfg["Parameters"]["run_geneid"]:
         jobSplitMasked >> job >> jobMergingGeneId 
 
     if job_junctions == True:
-        if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]:    
+        if cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_hints"] or cfg["Parameters"]["run_genemark_ET"]:    
             jobMergingGeneId >> jobJunctions
 
     if cfg["Parameters"]["run_evm"]:
@@ -783,7 +785,7 @@ if cfg["Parameters"]["run_glimmer"] and cfg["Parameters"]["run_evm"]:
 
 if cfg["Parameters"]["run_spaln"] and job_junctions == True:
     #15.3 Spaln Dependencies
-    if (cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_introns"] or cfg["Parameters"]["run_genemark_ET"]) and cfg["Parameters"]["run_evm"]:
+    if (cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_hints"] or cfg["Parameters"]["run_genemark_ET"]) and cfg["Parameters"]["run_evm"]:
         jobSpaln >> jobJunctions >> jobSelectWeights
 
 if cfg["Parameters"]["run_geneid_introns"]:
@@ -796,15 +798,15 @@ if cfg["Parameters"]["run_geneid_introns"]:
     if cfg["Parameters"]["run_evm"]:
         jobMergingGeneIdIntrons >> jobEvmPrediction
 
-if cfg["Parameters"]["run_augustus_introns"]:
-  #  15.2 Augustus Introns Dependencies
-    for job in listAugustusIntronsJobs:
+if cfg["Parameters"]["run_augustus_hints"]:
+  #  15.2 Augustus hints Dependencies
+    for job in listAugustusHintsJobs:
         jobSplitMasked >> job 
         jobJunctions >> job 
-        job >> jobMergingAugustusIntrons
+        job >> jobMergingAugustusHints
 
     if cfg["Parameters"]["run_evm"]:
-        jobMergingAugustusIntrons >> jobEvmPrediction
+        jobMergingAugustusHints >> jobEvmPrediction
 
 if cfg["Parameters"]["run_genemark_ET"]:
     #15.2 Genemark-ET Dependencies

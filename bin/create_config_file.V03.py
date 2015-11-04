@@ -4,8 +4,8 @@ import json
 import argparse
 import sys
 
-#Author: Jessica Gomez, CNAG.
-#Contact email: jgomez@pcb.ub.cat
+#Author: Jessica Gomez, CNAG-CRG.
+#Contact email: jessica.gomez@cnag.crg.eu
 #Date:03242015
 
 
@@ -22,7 +22,7 @@ class CreateConfigurationFile(object):
         self.run_genemark = True                           #By default run genemark step
         self.run_glimmer = True                            #By default run glimmer step
         self.run_geneid_introns = True                     #By default run geneid with introns step
-        self.run_augustus_introns = True                   #By default run augustus with introns step
+        self.run_augustus_hints = True                   #By default run augustus with hints step
         self.run_genemark_ET = True                        #By default run genemark-ET step
         self.run_spaln = True                              #By default run spaln step
         self.run_pasa = True                               #By default run pasa step
@@ -41,7 +41,8 @@ class CreateConfigurationFile(object):
         self.geneid_parameters = None                      #Path to the geneid parameters file. For geneid, geneid with introns and framefixing (part of annotation update) steps.
         self.glimmer_directory = None                      #Path to the directory containing the trained parameters for running glimer.
         self.proteins = None                               #Path to the fasta with protein evidence.
-        self.extrinsic_file_augustus_introns = None        #Extrinsic file to use when running augustus with introns. For more information read augustus documentation.
+        self.extrinsic_file_augustus_hints = None        #Extrinsic file to use when running augustus with hints. For more information read augustus documentation.
+        self.ep_hints = None                               #Exonic hints to be used when running Augustus with hints. 
         self.pasadb = None                                 #Name of the pasa database, it must coincide with the name given in pasa-config.
         self.transcripts = None                            #Path to the fasta with transcript evidence.
         self.pasa_config = None                            #Path to the Pasa configuration file.
@@ -71,8 +72,8 @@ class CreateConfigurationFile(object):
         self.spaln_gene =  self.output_dir + "/protein_and_transcript_mappings/spaln/proteins_spaln_gene.gff3"    #Output file for the spaln output in a gene gff3 format.
         self.geneid_introns_prediction = self.output_dir + "/gene_predictions/geneid_with_introns/geneid_introns.gff3"  #Output file for the geneid with introns predictions.
         self.geneid_introns_preEVM = self.output_dir + "/gene_predictions/geneid_with_introns/geneid_introns_preEVM.gff3"  #Output file for the geneid with introns predictions converted for EVM.
-        self.augustus_introns_prediction = self.output_dir + "/gene_predictions/augustus_with_introns/augustus_introns.gff3"  #Output file for the augustus with introns predictions.
-        self.augustus_introns_preEVM = self.output_dir + "/gene_predictions/augustus_with_introns/augustus_introns_preEVM.gff3"  #Output file for the augustus with introns predictions converted for EVM.
+        self.augustus_hints_prediction = self.output_dir + "/gene_predictions/augustus_with_hints/augustus_hints.gff3"  #Output file for the augustus with hints predictions.
+        self.augustus_hints_preEVM = self.output_dir + "/gene_predictions/augustus_with_hints/augustus_hints_preEVM.gff3"  #Output file for the augustus with hints predictions converted for EVM.
         self.genemark_ET_prediction = self.output_dir + "/gene_predictions/genemark-ET.gtf"  #Output file for the genemark-ET predictions.
         self.genemark_ET_preEVM = self.output_dir + "/gene_predictions/genemark-ET_preEVM.gff3"  #Output file for the genemark-ET predictions converted for EVM.
         self.pasa_dir =  self.output_dir + "/protein_and_transcript_mappings/pasa/"     #Directory to keep all the pasa outputs.   
@@ -90,7 +91,7 @@ class CreateConfigurationFile(object):
         self.aug_alternatives_from_sampling = "true"       #Report alternative transcripts generated through probabilistic sampling. For augustus and augustus with hints.                      
         self.aug_uniqueGeneId = "true"                     #If true, output gene identifyers like this: seqname.gN. For augustus and augustus with hints.         
         self.aug_gff3 = "ON"                               #Output in gff3 format. For augustus and augustus with hints.
-        self.aug_sample = 60                               #For augustus and augustus with introns. 
+        self.aug_sample = 60                               #For augustus and augustus with hints. 
         self.aug_noInFrameStop = "true"                    #Do not report transcripts with in-frame stop codons. Otherwise, intron-spanning stop codons could occur. For augustus and augustus with hints.
         self.aug_maxtracks = 2                             #Maximum number of tracks allowed. For augustus and augustus with hints.
         self.aug_singlestrand = "false"                    #Predict genes independently on each strand, allow overlapping genes on opposite strands. For augustus and augustus with hints.
@@ -127,9 +128,9 @@ class CreateConfigurationFile(object):
         self.geneid_introns_weights = [3,3,3]              #Weights given to geneid with intron predictions when running EVM.
         self.geneid_introns_options = "3nU"                #Desired geneid options to run geneid with introns, see geneid documentation for more information.
 
-        #AUGUSTUS INTRONS PARAMETERS
-        self.augustus_introns_weights = [3,3,3]            #Weights given to augustus with intron predictions when running EVM.
-        self.additional_augustus_introns_options = None    #Additional augustus options to run augustus with hints, see augustus help for more information.
+        #AUGUSTUS hints PARAMETERS
+        self.augustus_hints_weights = [3,3,3]            #Weights given to augustus with intron predictions when running EVM.
+        self.additional_augustus_hints_options = None    #Additional augustus options to run augustus with hints, see augustus help for more information.
 
         #GENEMARK-ET PARAMETERS
         self.gmk_et_score = 4                              #Minimum score of intron in initiation of the ET algorithm
@@ -140,7 +141,7 @@ class CreateConfigurationFile(object):
         self.pasa_CPU = 8                                  #Number of pasa_CPUs to run Pasa.
         self.pasa_step = 1                                 #Step from where to start running Pasa.
         self.pasa_weights = [8, 10, 8]                     #Weights given to pasa mappings when running EVM.
-        self.pasa_home = "/project/devel/aateam/bin/PASApipeline-2.0.1"
+        self.pasa_home = "/project/devel/aateam/src/PASApipeline-2.0.2"
         self.create_database = False                       #By default do not create pasa database.
 
         #TRANSDECODER PARAMETERS
@@ -166,7 +167,7 @@ class CreateConfigurationFile(object):
         self.glimmerParameters = {}
         self.spalnParameters = {}   
         self.geneidIntronsParameters = {}      
-        self.augustusIntronsParameters = {}
+        self.augustusHintsParameters = {}
         self.genemarkETParameters = {}
         self.pasaParameters = {}
         self.transdecoderParameters = {}
@@ -188,7 +189,7 @@ class CreateConfigurationFile(object):
         self.register_glimmer(parser)
         self.register_spaln(parser)
         self.register_geneid_introns(parser)
-        self.register_augustus_introns(parser)
+        self.register_augustus_hints(parser)
         self.register_genemark_ET(parser)
         self.register_pasa(parser)
         self.register_transdecoder(parser)
@@ -210,7 +211,7 @@ class CreateConfigurationFile(object):
         general_group.add_argument('--no-genemark', dest="run_genemark", action="store_false", help='If specified, do not run genemark step.')
         general_group.add_argument('--no-glimmer', dest="run_glimmer", action="store_false", help='If specified, do not run glimmer step.')
         general_group.add_argument('--no-geneid-introns', dest="run_geneid_introns", action="store_false", help='If specified, do not run geneid with introns step.')
-        general_group.add_argument('--no-augustus-introns', dest="run_augustus_introns", action="store_false", help='If specified, do not run augustus with introns step.')
+        general_group.add_argument('--no-augustus-hints', dest="run_augustus_hints", action="store_false", help='If specified, do not run augustus with hints step.')
         general_group.add_argument('--no-genemark-ET', dest="run_genemark_ET", action="store_false", help='If specified, do not run genemark-ET step.')
         general_group.add_argument('--no-spaln', dest="run_spaln", action="store_false", help='If specified, do not run spaln step.')
         general_group.add_argument('--no-pasa', dest="run_pasa", action="store_false", help='If specified, do not run pasa step.')
@@ -235,7 +236,8 @@ class CreateConfigurationFile(object):
         input_group.add_argument('--geneid-parameters', dest="geneid_parameters", metavar="geneid_parameters", help='Path to the geneid parameters file. For geneid, geneid with introns and framefixing (part of annotation update) steps.')
         input_group.add_argument('--glimmer-directory', dest="glimmer_directory", metavar="glimmer_directory", help='Path to the directory containing the trained parameters for running glimer.')
         input_group.add_argument('--proteins', dest="proteins", metavar="proteins", help='Path to the fasta with protein evidence.')
-        input_group.add_argument('--extrinsic-file-augustus-introns', dest="extrinsic_file_augustus_introns", metavar="extrinsic_file_augustus_introns", help='Path to the Extrinsic file to use when running augustus with introns. For more information read augustus documentation.')
+        input_group.add_argument('--extrinsic-file-augustus-hints', dest="extrinsic_file_augustus_hints", metavar="extrinsic_file_augustus_hints", help='Path to the Extrinsic file to use when running augustus with hints. For more information read augustus documentation.')
+        input_group.add_argument('--ep-hints', dest="ep_hints", metavar="ep_hints", help='Path to the exonic hints to use when running augustus with hints. For more information read augustus documentation.')
         input_group.add_argument('--pasadb', dest="pasadb", metavar="pasadb", help='Name of the pasa database, it must coincide with the name in pasa_config.')
         input_group.add_argument('--transcripts', dest="transcripts", metavar="transcripts", help='Path to the fasta with transcript evidence.')
         input_group.add_argument('--pasa-config', dest="pasa_config", metavar="pasa_config", help='Path to the pasa configuration file.')
@@ -271,8 +273,8 @@ class CreateConfigurationFile(object):
         output_group.add_argument('--spaln-gene', dest="spaln_gene", help='Output file for the spaln output in a gene gff3 format.  Default %s' % self.spaln_gene)
         output_group.add_argument('--geneid-introns-prediction', dest="geneid_introns_prediction", help='Output file for the geneid with introns predictions.  Default %s' % self.geneid_introns_prediction)
         output_group.add_argument('--geneid-introns-preEVM', dest="geneid_introns_preEVM", help='Output file for the geneid with introns predictions converted for EVM.  Default %s' % self.geneid_introns_preEVM)
-        output_group.add_argument('--augustus-introns-prediction', dest="augustus_introns_prediction", help='Output file for the augustus with introns predictions.  Default %s' % self.augustus_introns_prediction)
-        output_group.add_argument('--augustus-introns-preEVM', dest="augustus_introns_preEVM", help='Output file for the augustus with introns predictions converted for EVM.  Default %s' % self.augustus_introns_preEVM)
+        output_group.add_argument('--augustus-hints-prediction', dest="augustus_hints_prediction", help='Output file for the augustus with hints predictions.  Default %s' % self.augustus_hints_prediction)
+        output_group.add_argument('--augustus-hints-preEVM', dest="augustus_hints_preEVM", help='Output file for the augustus with hints predictions converted for EVM.  Default %s' % self.augustus_hints_preEVM)
         output_group.add_argument('--genemark-ET-prediction', dest="genemark_ET_prediction", help='Output file for the genemark-ET predictions.  Default %s' % self.genemark_ET_prediction)
         output_group.add_argument('--genemark-ET-preEVM', dest="genemark_ET_preEVM", help='Output file for the genemark-ET predictions converted for EVM.  Default %s' % self.genemark_ET_preEVM)
         output_group.add_argument('--pasa-dir', dest="pasa_dir", help='Directory to keep all the pasa outputs.  Default %s' % self.pasa_dir)
@@ -302,7 +304,7 @@ class CreateConfigurationFile(object):
         augustus_group.add_argument('--aug-alternatives-from-sampling', dest="aug_alternatives_from_sampling", default=self.aug_alternatives_from_sampling, choices=['true', 'false'], help='''Report alternative transcripts generated through probabilistic sampling. For augustus and augustus with hints. Default %s''' % str(self.aug_alternatives_from_sampling))
         augustus_group.add_argument('--aug-uniqueGeneId', dest="aug_uniqueGeneId", default=self.aug_uniqueGeneId, choices = ['true', 'false'], help='''If true, output gene identifyers like this: seqname.gN. For augustus and augustus with hints. Default %s''' % str(self.aug_uniqueGeneId))
         augustus_group.add_argument('--aug-gff3', dest="aug_gff3", default=self.aug_gff3, choices = ['ON', 'OFF', 'on', 'off'], help='''Output in gff3 format. For augustus and augustus with hints. Default %s''' % str(self.aug_gff3))
-        augustus_group.add_argument('--aug-sample', dest="aug_sample", type=int, default=self.aug_sample, help='''For augustus and augustus with introns. Default %s''' % str(self.aug_sample))
+        augustus_group.add_argument('--aug-sample', dest="aug_sample", type=int, default=self.aug_sample, help='''For augustus and augustus with hints. Default %s''' % str(self.aug_sample))
         augustus_group.add_argument('--aug-noInFrameStop', dest="aug_noInFrameStop", default=self.aug_noInFrameStop, choices = ['true', 'false'], help='''Do not report transcripts with in-frame stop codons. Otherwise, intron-spanning stop codons could occur. For augustus and augustus with hints. Default %s''' % str(self.aug_noInFrameStop))
         augustus_group.add_argument('--aug-maxtracks', dest="aug_maxtracks", type=int, default=self.aug_maxtracks, help='''Maximum number of tracks allowed. For augustus and augustus with hints. Default %s''' % str(self.aug_maxtracks))
         augustus_group.add_argument('--aug-singlestrand', dest="aug_singlestrand", default=self.aug_singlestrand, choices = ['true', 'false'], help='''Predict genes independently on each strand, allow overlapping genes on opposite strands. For augustus and augustus with hints. Default %s''' % str(self.aug_singlestrand))
@@ -369,15 +371,15 @@ class CreateConfigurationFile(object):
         geneid_introns_group.add_argument('--geneid-introns-weights', dest="geneid_introns_weights", nargs="+", type=int, default=self.geneid_introns_weights, help='Weights given to geneid with intron predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 3 3 3 ')
         geneid_introns_group.add_argument('--geneid-introns-options', dest="geneid_introns_options", default=self.geneid_introns_options, help='Desired geneid with intron options to run it, see geneid documentation for more information. Default %s''' % str(self.geneid_options))
   
-    def register_augustus_introns(self, parser):
-        """Register all augustus with introns parameters with given
+    def register_augustus_hints(self, parser):
+        """Register all augustus with hints parameters with given
         argparse parser
 
         parser -- the argparse parser
         """
-        augustus_introns_group = parser.add_argument_group('Augustus Introns parameters')
-        augustus_introns_group.add_argument('--augustus-introns-weights', dest="augustus_introns_weights", nargs="+", type=int, default=self.augustus_introns_weights, help='Weights given to augustus with intron predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 3 3 3 ')
-        augustus_introns_group.add_argument('--additional-augustus-introns-options', dest="additional_augustus_introns_options", default=self.additional_augustus_introns_options, help='Desired augustus with intron options to run it, see augustus documentation for more information.''')
+        augustus_hints_group = parser.add_argument_group('Augustus hints parameters')
+        augustus_hints_group.add_argument('--augustus-hints-weights', dest="augustus_hints_weights", nargs="+", type=int, default=self.augustus_hints_weights, help='Weights given to augustus with intron predictions when running EVM. Specify the weight for each EVM run separated by a space. Example 3 3 3 ')
+        augustus_hints_group.add_argument('--additional-augustus-hints-options', dest="additional_augustus_hints_options", default=self.additional_augustus_hints_options, help='Desired augustus with intron options to run it, see augustus documentation for more information.''')
 
     def register_genemark_ET(self, parser):
         """Register all genemark-ET parameters with given
@@ -453,7 +455,7 @@ class CreateConfigurationFile(object):
         if args.EVM_dir:
             self.EVM_dir = os.path.abspath(args.EVM_dir)
         else:
-            self.EVM_dir = working_dir + "/step0" + str(int(self.annotation_step) + 1) + "_EVM.V" + self.annotation_version  + "/"
+            self.EVM_dir = working_dir + "/step0" + str(int(args.annotation_step) + 1) + "_EVM.V" + self.annotation_version  + "/"
 
         if args.dir_masked_chunks:
             self.dir_masked_chunks =os.path.abspath(args.dir_masked_chunks)
@@ -530,15 +532,15 @@ class CreateConfigurationFile(object):
         else: 
             self.geneid_introns_preEVM = self.output_dir + "/gene_predictions/geneid_with_introns/geneid_introns_preEVM.gff3"
 
-        if args.augustus_introns_prediction:
-            self.augustus_introns_prediction = os.path.abspath(args.augustus_introns_prediction)
+        if args.augustus_hints_prediction:
+            self.augustus_hints_prediction = os.path.abspath(args.augustus_hints_prediction)
         else: 
-            self.augustus_introns_prediction = self.output_dir + "/gene_predictions/augustus_with_introns/augustus_introns.gff3"
+            self.augustus_hints_prediction = self.output_dir + "/gene_predictions/augustus_with_hints/augustus_hints.gff3"
 
-        if args.augustus_introns_preEVM:
-            self.augustus_introns_preEVM = os.path.abspath(args.augustus_introns_preEVM)
+        if args.augustus_hints_preEVM:
+            self.augustus_hints_preEVM = os.path.abspath(args.augustus_hints_preEVM)
         else: 
-            self.augustus_introns_preEVM = self.output_dir + "/gene_predictions/augustus_with_introns/augustus_introns_preEVM.gff3"
+            self.augustus_hints_preEVM = self.output_dir + "/gene_predictions/augustus_with_hints/augustus_hints_preEVM.gff3"
 
         
         if args.genemark_ET_prediction:
@@ -559,12 +561,12 @@ class CreateConfigurationFile(object):
         if args.update_dir:
             self.update_dir = os.path.abspath(args.update_dir)
         else:
-            self.update_dir = "step0" + str(int(self.annotation_step) + 2) + "_annotation_update.V" + self.annotation_version  + "/" 
+            self.update_dir = "step0" + str(int(args.annotation_step) + 2) + "_annotation_update.V" + self.annotation_version  + "/" 
 
         if args.ncRNA_annotation_dir:
             self.ncRNA_annotation_dir = os.path.abspath(args.ncRNA_annotation_dir)
         else:
-            self.ncRNA_annotation_dir = "step0" + str(int(self.annotation_step) + 3) + "_ncRNA_annotation.V" + self.annotation_version  + "/"
+            self.ncRNA_annotation_dir = "step0" + str(int(args.annotation_step) + 3) + "_ncRNA_annotation.V" + self.annotation_version  + "/"
 
         if args.out_cmsearch:
             self.out_cmsearch = os.path.abspath(args.out_cmsearch)
@@ -577,7 +579,7 @@ class CreateConfigurationFile(object):
             self.out_tRNAscan = self.ncRNA_annotation_dir + "/tRNAscan-SE/tRNAscan.out"
 
         ##Checking inputs
-        if args.run_geneid or args.run_genemark or args.run_glimmer or args.run_augustus or args.run_geneid_introns or args.run_augustus_introns or args.run_genemark_ET:
+        if args.run_geneid or args.run_genemark or args.run_glimmer or args.run_augustus or args.run_geneid_introns or args.run_augustus_hints or args.run_genemark_ET:
             if args.genome_masked == None:
                 print "Sorry! No masked genome fasta file defined"
             else:
@@ -595,7 +597,7 @@ class CreateConfigurationFile(object):
                 else:
                     args.genome = os.path.abspath(args.genome)
 
-        if args.run_geneid_introns or args.run_augustus_introns or args.run_genemark_ET:
+        if args.run_geneid_introns or args.run_augustus_hints or args.run_genemark_ET:
             if args.junctions == None and args.incoding_junctions == None:
                 print "Sorry! No junctions gff file given."
             else:
@@ -608,7 +610,7 @@ class CreateConfigurationFile(object):
                     if os.path.exists(args.incoding_junctions):
                         args.incoding_junctions = os.path.abspath(args.incoding_junctions)      
 
-        if args.run_augustus or args.run_augustus_introns:
+        if args.run_augustus or args.run_augustus_hints:
             if args.species == None:
                 print "Sorry! No species for augustus defined"        
 
@@ -639,14 +641,20 @@ class CreateConfigurationFile(object):
                 else:
                     args.proteins = os.path.abspath(args.proteins)
 
-        if args.run_augustus_introns:
-            if args.extrinsic_file_augustus_introns == None:
-                print "Sorry! No extrinsic file for augustus with introns given."
+        if args.run_augustus_hints:
+            if args.extrinsic_file_augustus_hints == None:
+                print "Sorry! No extrinsic file for augustus with hints given."
             else:
-                if not os.path.exists(args.extrinsic_file_augustus_introns):
-                    print args.extrinsic_file_augustus_introns + " not found" 
+                if not os.path.exists(args.extrinsic_file_augustus_hints):
+                    print args.extrinsic_file_augustus_hints + " not found" 
                 else:
-                    args.extrinsic_file_augustus_introns = os.path.abspath(args.extrinsic_file_augustus_introns)
+                    args.extrinsic_file_augustus_hints = os.path.abspath(args.extrinsic_file_augustus_hints)
+
+            if args.ep_hints:
+                if not os.path.exists(args.ep_hints):
+                    print args.ep_hints + "not found"
+                else:
+                    args.ep_hints = os.path.abspath(args.ep_hints) 
 
         if args.run_pasa or args.run_transdecoder or args.run_update:
             if args.pasadb == None:
@@ -732,7 +740,7 @@ class CreateConfigurationFile(object):
         self.generalParameters["run_genemark"] = args.run_genemark
         self.generalParameters["run_glimmer"] = args.run_glimmer
         self.generalParameters["run_geneid_introns"] = args.run_geneid_introns
-        self.generalParameters["run_augustus_introns"] = args.run_augustus_introns
+        self.generalParameters["run_augustus_hints"] = args.run_augustus_hints
         self.generalParameters["run_genemark_ET"] = args.run_genemark_ET
         self.generalParameters["run_spaln"] = args.run_spaln
         self.generalParameters["run_pasa"] = args.run_pasa
@@ -756,7 +764,8 @@ class CreateConfigurationFile(object):
         self.inputParameters["geneid_parameters"] = args.geneid_parameters
         self.inputParameters["glimmer_directory"] = args.glimmer_directory
         self.inputParameters["proteins"] = args.proteins
-        self.inputParameters["extrinsic_file_augustus_introns"] = args.extrinsic_file_augustus_introns
+        self.inputParameters["extrinsic_file_augustus_hints"] = args.extrinsic_file_augustus_hints
+        self.inputParameters["ep_hints"] = args.ep_hints
         self.inputParameters["pasadb"] = args.pasadb
         self.inputParameters["transcripts"] = args.transcripts
         self.inputParameters["pasa_config"] = args.pasa_config
@@ -792,8 +801,8 @@ class CreateConfigurationFile(object):
         self.outputParameters["spaln_gene"] = self.spaln_gene
         self.outputParameters["geneid_introns_prediction"] = self.geneid_introns_prediction
         self.outputParameters["geneid_introns_preEVM"] = self.geneid_introns_preEVM
-        self.outputParameters["augustus_introns_prediction"] = self.augustus_introns_prediction
-        self.outputParameters["augustus_introns_preEVM"] = self.augustus_introns_preEVM
+        self.outputParameters["augustus_hints_prediction"] = self.augustus_hints_prediction
+        self.outputParameters["augustus_hints_preEVM"] = self.augustus_hints_preEVM
         self.outputParameters["genemark_ET_prediction"] = self.genemark_ET_prediction
         self.outputParameters["genemark_ET_preEVM"] = self.genemark_ET_preEVM
         self.outputParameters["pasa_dir"] = self.pasa_dir
@@ -885,14 +894,14 @@ class CreateConfigurationFile(object):
         self.geneidIntronsParameters["geneid_introns_options"] = args.geneid_introns_options       
         self.allParameters ["geneid_introns"] = self.geneidIntronsParameters
 
-    def storeAugustusIntronsParameters(self,args):
+    def storeAugustusHintsParameters(self,args):
         """Updates augustus with introns parameters to the map of parameters to be store in a JSON file
 
         args -- set of parsed arguments
         """
-        self.augustusIntronsParameters["augustus_introns_weights"] = args.augustus_introns_weights
-        self.augustusIntronsParameters["additional_augustus_introns_options"] = args.additional_augustus_introns_options       
-        self.allParameters ["augustus_introns"] = self.augustusIntronsParameters
+        self.augustusHintsParameters["augustus_hints_weights"] = args.augustus_hints_weights
+        self.augustusHintsParameters["additional_augustus_hints_options"] = args.additional_augustus_hints_options       
+        self.allParameters ["augustus_hints"] = self.augustusHintsParameters
 
     def storeGenemarkETParameters(self,args):
         """Updates genemark parameters to the map of parameters to be store in a JSON file
@@ -970,7 +979,7 @@ configManager.storeGenemarkParameters(args)
 configManager.storeGlimmerParameters(args)
 configManager.storeSpalnParameters(args)
 configManager.storeGeneidIntronsParameters(args)
-configManager.storeAugustusIntronsParameters(args)
+configManager.storeAugustusHintsParameters(args)
 configManager.storeGenemarkETParameters(args)
 configManager.storePasaParameters(args)
 configManager.storeTransdecoderParameters(args)

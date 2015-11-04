@@ -1,12 +1,5 @@
 #!/usr/bin/perl
 
-############################################################
-#
-# script to run augustus with hints.
-#
-# Author: J. Gómez Garrido
-############################################################
-
 #use strict;
 #use warnings;
 
@@ -26,18 +19,18 @@ my $intronlength = $ARGV[11];
 my $extrinsic_file = $ARGV[12];
 $additional = $ARGV[13];
 
-my $junctions_gff = "junctions.gff";
-my $junctions = "junctions.sorted.gff.gz";
+my $hints_gff = "hints.gff";
+my $hints = "hints.sorted.gff.gz";
 
 
 my %scaff;
-open JUNCTIONS, "<", "$junctions_gff";
-while (<JUNCTIONS>){
+open HINTS, "<", "$hints_gff";
+while (<HINTS>){
     chomp;
     my @line = split /\s+/, $_;
     $scaff{$line[0]}++ if (!exists $scaff{$line[0]});
 }
-close JUNCTIONS;
+close HINTS;
 
 open FASTA, "<", "$chunkfile";
 my $id;
@@ -49,8 +42,8 @@ while (<FASTA>) {
     $id = $id[1];
     next if (!exists $scaff{$id});
     system "fastafetch -f $chunkfile -i $index -q $id > $id.masked.fa";
-    system "tabix $junctions $id > $id.junctions.gff";
-    system "augustus --species=$species --hintsfile=$id.junctions.gff --alternatives-from-sampling=$alternatives --sample=$sample --gff3=$gff3 --noInFrameStop=$noInFrameStop --uniqueGeneId=$uniqueGeneId --maxtracks=$maxtracks --strand=$strand --singlestrand=$singlestrand --min_intron_len=$intronlength --extrinsicCfgFile=$extrinsic_file $additional $id.masked.fa > $id.augustus_introns.gff3";
+    system "tabix $hints $id > $id.hints.gff";
+    system "augustus --species=$species --hintsfile=$id.hints.gff --alternatives-from-sampling=$alternatives --sample=$sample --gff3=$gff3 --noInFrameStop=$noInFrameStop --uniqueGeneId=$uniqueGeneId --maxtracks=$maxtracks --strand=$strand --singlestrand=$singlestrand --min_intron_len=$intronlength --extrinsicCfgFile=$extrinsic_file $additional $id.masked.fa > $id.augustus_introns.gff3";
     
 }
 close FASTA;

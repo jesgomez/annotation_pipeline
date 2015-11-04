@@ -71,7 +71,7 @@
             "time": "3h"   
         },
         "Annotation_Update*":{
-            "time": "24h",
+            "time": "3h",
             "threads": 2
         },
         "cmsearch":{

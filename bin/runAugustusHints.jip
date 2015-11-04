@@ -2,12 +2,13 @@
 #Run augustus with hints
 #
 #Usage:
-# runAugustusIntrons.jip -r <masked_chunk> -g <global_log> -e <home_dir> -o <out> -j <incoding_junctions> -x <extrisic_file> -s <species> --alternatives_from_sampling <alternatives_from_sampling> --sample <sample> --gff3 <gff3> --noInFrameStop <noInFrameStop> --uniqueGeneId <uniqueGeneId> --maxtracks <maxtracks> --strand <strand> --singlestrand <singlestrand> --min_intron_len <min_intron_len> [--additional <additional>]  
+# runAugustusIntrons.jip -r <masked_chunk> -g <global_log> -e <home_dir> -o <out> -j <incoding_junctions> [-h <ep_hints>] -x <extrisic_file> -s <species> --alternatives_from_sampling <alternatives_from_sampling> --sample <sample> --gff3 <gff3> --noInFrameStop <noInFrameStop> --uniqueGeneId <uniqueGeneId> --maxtracks <maxtracks> --strand <strand> --singlestrand <singlestrand> --min_intron_len <min_intron_len> [--additional <additional>]  
 #
 #Inputs:
 # -g, --global_log <global_log>               Global log of job states  
 # -e, --home_dir <home_dir>                   Home directory to locate the scripts
 # -j, --incoding_junctions <incoding_junctions>     File with the junctions that will be used as evidence
+# -h, --ep_hints <ep_hints>                   File with the exonic hints that will be used as evidence
 # -x, --extrinsic_file <extrinsic_file>       
 #
 #Outputs:
@@ -30,13 +31,14 @@
 
 cd $TMPDIR
 sed 's/\tIntron\t/\tintron\t/g' ${incoding_junctions} | ${home_dir}/scripts/junctions2augustushints.pl > junctions.gff
-${home_dir}/scripts/sortgff junctions.gff > junctions.sorted.gff
-bgzip junctions.sorted.gff
-tabix -p gff junctions.sorted.gff.gz
+cat junctions.gff ${ep_hints} > hints.gff
+${home_dir}/scripts/sortgff hints.gff > hints.sorted.gff
+bgzip hints.sorted.gff
+tabix -p gff hints.sorted.gff.gz
 ln -s ${masked_chunk} masked_genome_chunk.fa
 ${home_dir}/scripts/fastaindex masked_genome_chunk.fa masked.index
 module unload intel
-${home_dir}/scripts/run_augustus_with_introns.pl masked_genome_chunk.fa masked.index ${species} ${alternatives_from_sampling} ${sample} ${gff3} ${noInFrameStop} ${uniqueGeneId} ${maxtracks}  ${strand} ${singlestrand} ${min_intron_len} ${extrinsic_file} ${additional}
+${home_dir}/scripts/run_augustus_with_hints.pl masked_genome_chunk.fa masked.index ${species} ${alternatives_from_sampling} ${sample} ${gff3} ${noInFrameStop} ${uniqueGeneId} ${maxtracks}  ${strand} ${singlestrand} ${min_intron_len} ${extrinsic_file} ${additional}
 cat *augustus_introns.gff3 > ${out}
 
 if [ "$?" != "0" ];
