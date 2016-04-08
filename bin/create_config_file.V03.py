@@ -455,7 +455,7 @@ class CreateConfigurationFile(object):
         if args.EVM_dir:
             self.EVM_dir = os.path.abspath(args.EVM_dir)
         else:
-            self.EVM_dir = working_dir + "/step0" + str(int(args.annotation_step) + 1) + "_EVM.V" + self.annotation_version  + "/"
+            self.EVM_dir = working_dir + "/step0" + str(int(args.annotation_step) + 1) + "_EVM.V" + str(args.annotation_version)  + "/"
 
         if args.dir_masked_chunks:
             self.dir_masked_chunks =os.path.abspath(args.dir_masked_chunks)
@@ -561,12 +561,12 @@ class CreateConfigurationFile(object):
         if args.update_dir:
             self.update_dir = os.path.abspath(args.update_dir)
         else:
-            self.update_dir = "step0" + str(int(args.annotation_step) + 2) + "_annotation_update.V" + self.annotation_version  + "/" 
+            self.update_dir = "step0" + str(int(args.annotation_step) + 2) + "_annotation_update.V" +str(args.annotation_version)  + "/" 
 
         if args.ncRNA_annotation_dir:
             self.ncRNA_annotation_dir = os.path.abspath(args.ncRNA_annotation_dir)
         else:
-            self.ncRNA_annotation_dir = "step0" + str(int(args.annotation_step) + 3) + "_ncRNA_annotation.V" + self.annotation_version  + "/"
+            self.ncRNA_annotation_dir = "step0" + str(int(args.annotation_step) + 3) + "_ncRNA_annotation.V" + str(args.annotation_version)  + "/"
 
         if args.out_cmsearch:
             self.out_cmsearch = os.path.abspath(args.out_cmsearch)

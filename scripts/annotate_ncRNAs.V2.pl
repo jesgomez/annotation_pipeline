@@ -58,6 +58,7 @@ close INFERNAL;
 open tRNA, "<", "$trnascan";
 while (<tRNA>) {
     chomp;
+    next if /^\#/o;
     my @line = split /\s+/, $_;
    # print "$line[17]\n";
     my $scaffold = $line[0];
@@ -86,7 +87,7 @@ while (<tRNA>) {
          if ($intronend > 0) {
              my $exonend = $intronend - 1;
              my $exonstart = $intronstart + 1;
-             $exons{$scaffold}{$end} = "$scaffold\tCNAG\texon\t$end\t$intronend\t.\t-\t.\tParent=" . $project . "snc" . $version . ";ID=" . $project . "snc" . $version . ".exon1\n$scaffold\tCNAG\texon\t$intronstart\t$start\t.\t-\t.\tParent=" . $project . "snc" . $version . ";ID=" . $project . "snc" . $version . ".exon2\n";
+             $exons{$scaffold}{$end} = "$scaffold\tCNAG\texon\t$end\t$intronend\t.\t-\t.\tParent=" . $project . "snc" . $version . ";ID=" . $project . "snc" . $version . ".exon2\n$scaffold\tCNAG\texon\t$intronstart\t$start\t.\t-\t.\tParent=" . $project . "snc" . $version . ";ID=" . $project . "snc" . $version . ".exon1\n";
          }
          else {
              $exons{$scaffold}{$end} = "$scaffold\tCNAG\texon\t$end\t$start\t.\t-\t.\tParent=" . $project . "snc" . $version . ";ID=" . $project . "snc" . $version . ".exon1\n";

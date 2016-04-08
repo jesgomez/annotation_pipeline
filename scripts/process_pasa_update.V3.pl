@@ -98,7 +98,10 @@ while (<EVM>){
     }
     elsif ($line[2] eq 'mRNA'){
         if ($line[8] =~ m/ID=([^;]+)/) {$evm_mRNA = $1;}
-        if ($line[8] =~ m/Parent=/) {
+        if ($line[8] =~ m/Parent=([^;]+)/) {
+            $evm_gene = $1;            
+        }
+        elsif ($line[8] =~ m/Parent=/) {
             $evm_gene = $';            
         }
         $evm_transcripts{$evm_gene}{$evm_mRNA} = $_; 
@@ -120,7 +123,7 @@ while (<EVM>){
             $evm_coords{$evm_gene}{$evm_cds_parent}{$n}->{start}=$line[3];
             $evm_coords{$evm_gene}{$evm_cds_parent}{$n}->{end}=$line[4];
             $n++;
-         #  print STDERR "$evm_gene\t$evm_cds_parent\t$evm_cds\t$len\t$evm_cds{$evm_gene}{$evm_cds_parent}->{lengths}\n";
+           # print  "$evm_gene\t$evm_cds_parent\t$evm_cds\t$len\t$evm_cds{$evm_gene}{$evm_cds_parent}->{lengths}\n";
         }
     }
 }
@@ -153,11 +156,11 @@ foreach my $parse_gene (keys %genes) {
                $tr = $test[$i];
            }
            $i = $i + 1;
-        #  print STDERR "$tr\n";
+        #   print STDERR "$tr\n";
            foreach (keys %{$evm_transcripts{$tr}}) {
-         #      print STDERR "$evm_transcripts{$tr}{$_}\n";
+               #print STDERR "$evm_transcripts{$tr}{$_}\n";
                $evm_length{$parse_gene} = $evm_length{$parse_gene} + $evm_cds{$tr}{$_}->{lengths};
-          #     print STDERR "$tr\t$_\t$parse_gene\t$evm_length{$parse_gene}\n";
+              # print STDERR "$tr\t$_\t$parse_gene\t$evm_length{$parse_gene}\n";
            }
       }
       foreach my $updt_mrna (keys %{$cds{$parse_gene}}) {

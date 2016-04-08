@@ -25,8 +25,9 @@
 
 cd ${UPDATE_DIR}
 ${home_dir}/scripts/process_pasa_update.V3.pl ${pasa_updates} ${EVM_out} > ${UPDATE_DIR}/${pasadb}.processed_updates.gff3
-${home_dir}/scripts/framefixer.pl -v -s ${genome} -param ${geneid_parameters} ${pasadb}.processed_updates.gff3 > ${UPDATE_DIR}/${pasadb}.ff.gff3 2> ${UPDATE_DIR}/${pasadb}.ff.log
-${home_dir}/scripts/assignIDs_generic_fast.pl -a ${pasadb}.ff.gff3 -project ${project} -V ${version}
+${home_dir}/scripts/sortgff_annot.pl ${UPDATE_DIR}/${pasadb}.processed_updates.gff3 > ${UPDATE_DIR}/${pasadb}.processed_updates.sorted.gff3
+${home_dir}/scripts/framefixer.pl -v -s ${genome} -param ${geneid_parameters} ${pasadb}.processed_updates.sorted.gff3 > ${UPDATE_DIR}/${pasadb}.ff.gff3 2> ${UPDATE_DIR}/${pasadb}.ff.log
+${home_dir}/scripts/assignIDs_generic_fast.v2.pl -a ${pasadb}.ff.gff3 -project ${project} -V ${version}
 cat *.${project}.${version}.gff3 | ${home_dir}/scripts/nmd_filter.pl > ${UPDATE_DIR}/${project}${version}.gff3
 ln -s ${genome} genome.fa
 ${home_dir}/scripts/CDS2seq.v2.pl -gff ${project}${version}.gff3 -seq genome.fa

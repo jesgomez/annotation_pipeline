@@ -34,8 +34,11 @@ while (<FASTA>) {
     #print "$_\n";
     my @id = split '>', $_;
     $id = $id[1];
-    next if (!exists $scaff{$id});
-    #print "$id\n";
+    if (!exists $scaff{$id}){
+        system "echo -e \"\# no junctions for $id\" > $id.geneid_with_introns.gff3";
+        next;
+    }
+    print "$id\n";
     system "fastafetch -f $chunkfile -i $index -q $id > $id.masked.fa";
     system "tabix $junctions $id > $id.junctions.gff";
     system "geneid -R $id.junctions.gff -P $geneid_parameters $geneid_options $id.masked.fa > $id.geneid_with_introns.gff3"; 

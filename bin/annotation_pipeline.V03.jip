@@ -10,7 +10,7 @@
 #                              [default: false]
 
 #Author: Jessica Gomez, CNAG.
-#Contact email: jgomez@pcb.ub.cat
+#Contact email: jessica.gomez@cnag.crg.eu
 #Date:03242015
 
 
@@ -599,6 +599,7 @@ if cfg["Parameters"]["run_evm"]:
         log = dirEvmOutputOut + "evm_merging.err", \
         out = dirEvmOutputOut + "evm_merging.out").\
         bash ("cd " + EVM_DIR + ";" +\
+             "rm predictions.gff3;" +\
              "cat *predictions* > predictions.gff3;" +\
              sortcommand)
 
@@ -783,10 +784,11 @@ if cfg["Parameters"]["run_genemark"] and cfg["Parameters"]["run_evm"]:
 if cfg["Parameters"]["run_glimmer"] and cfg["Parameters"]["run_evm"]:
     jobGlimmer >> jobEvmPrediction
 
+
 if cfg["Parameters"]["run_spaln"] and job_junctions == True:
     #15.3 Spaln Dependencies
     if (cfg["Parameters"]["run_geneid_introns"] or cfg["Parameters"]["run_augustus_hints"] or cfg["Parameters"]["run_genemark_ET"]) and cfg["Parameters"]["run_evm"]:
-        jobSpaln >> jobJunctions >> jobSelectWeights
+        jobSpaln >> jobJunctions
 
 if cfg["Parameters"]["run_geneid_introns"]:
   #  15.4 GeneID Introns Dependencies
@@ -825,9 +827,11 @@ if cfg["Parameters"]["run_pasa"]:
 if cfg["Parameters"]["run_evm"]:
     for job in listEvmJobs:
         jobEvmPrediction >> job >> jobSelectWeights
-        jobSpaln >> job >> jobSelectWeights
-        jobPasa >> job >> jobSelectWeights
-        jobTransdecoder >> job >> jobSelectWeights
+        jobSpaln >> jobEvmPrediction >> job >> jobSelectWeights
+        if cfg["Parameters"]["run_pasa"]:
+            jobPasa >> jobEvmPrediction >> job >> jobSelectWeights
+        if cfg["Parameters"]["run_transdecoder"]:
+            jobTransdecoder >> job >> jobSelectWeights
 
     if cfg["Parameters"]["run_update"]:
         jobSelectWeights >> jobAnnotationUpdate

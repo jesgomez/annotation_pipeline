@@ -8,10 +8,12 @@
             "time": "03:00:00"
         },
         "augustus_*":{
-            "time": "20h"
+            "time": "16h",
+            "threads": "2"
         },
         "merge*": {
-            "time": "00:10:00"
+            "time": "00:10:00",
+            "priority": "highprio"
         },
         "geneid_*":{
             "time": "3h", 
@@ -22,14 +24,16 @@
             "account": "AA",
             "extra": ["-C","AA"],
             "time": "48h",
-            "priority": "lowprio"
+            "priority": "lowprio",
+            "threads": "8"
         },
         "Genemark-ET":{
             "queue": "development",
             "account": "AA",
             "extra": ["-C","AA"],
             "time": "48h",
-            "priority": "lowprio"
+            "priority": "lowprio",
+            "threads": "8"
         },
         "Glimmer":{
             "queue": "development",
@@ -42,7 +46,8 @@
             "queue": "development",
             "account": "AA",
             "extra": ["-C","AA"],
-            "time": "20h"
+            "time": "20h",
+            "threads": "8"
         },
         "Clean_transcripts": {
             "time": "00:10:00",
@@ -53,7 +58,8 @@
             "account": "AA",
             "extra": ["-C","AA"],
             "time": "72h",
-            "priority": "lowprio"
+            "priority": "lowprio",
+            "threads": "8"
         },
         "Transdecoder":{
             "queue": "development",
@@ -71,6 +77,9 @@
             "time": "3h"   
         },
         "Annotation_Update*":{
+            "queue": "development",
+            "account": "AA",
+            "extra": ["-C","AA"],
             "time": "3h",
             "threads": 2
         },

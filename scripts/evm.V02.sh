@@ -46,7 +46,7 @@ echo collecting outputs;
 $EVM_PATH/EvmUtils/recombine_EVM_partial_outputs.pl --partitions partitions_list.out --output_file_name evm_$version.out;
 
 echo converting to gff3
-/project/devel/aateam/src/EVM_r2012-06-25/EvmUtils/convert_EVM_outputs_to_GFF3.pl --partitions partitions_list.out --output_file_name evm_$version.out --genome $genome;
+$EVM_PATH/EvmUtils/convert_EVM_outputs_to_GFF3.pl --partitions partitions_list.out --output_file_name evm_$version.out --genome $genome;
 
 lfs find . -name evm_$version.out | xargs cat > $DIR/evm_$version.out
 lfs find . -name evm_$version.out.gff3 | xargs cat > $DIR/evm_$version.gff3
